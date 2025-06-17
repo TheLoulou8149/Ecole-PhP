@@ -4,59 +4,54 @@ require_once 'config.php';
 $error = '';
 $success = '';
 
-// Traitement du formulaire d'inscription
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nom = sanitize($_POST['nom']);
-    $prenom = sanitize($_POST['prenom']);
-    $email = sanitize($_POST['email']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $nom = trim($_POST['nom']);
+    $prenom = trim($_POST['prenom']);
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
+    $confirm_password = trim($_POST['confirm_password']);
     $user_type = $_POST['user_type'];
     
-    // Validation des données
-    if (empty($nom) || empty($prenom) || empty($email) || empty($password) || empty($confirm_password) || empty($user_type)) {
-        $error = "Tous les champs sont obligatoires.";
-    } elseif (!validateEmail($email)) {
-        $error = "Format d'email invalide.";
-    } elseif (strlen($password) < 6) {
-        $error = "Le mot de passe doit contenir au moins 6 caractères.";
+    // Validation
+    if (empty($nom) || empty($prenom) || empty($email) || empty($password) || empty($user_type)) {
+        $error = 'Tous les champs sont obligatoires.';
     } elseif ($password !== $confirm_password) {
-        $error = "Les mots de passe ne correspondent pas.";
+        $error = 'Les mots de passe ne correspondent pas.';
+    } elseif (strlen($password) < 6) {
+        $error = 'Le mot de passe doit contenir au moins 6 caractères.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Format d\'email invalide.';
     } else {
         try {
-            $pdo = getDBConnection();
-            
-            // Déterminer la table selon le type d'utilisateur
-            $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
-            
             // Vérifier si l'email existe déjà
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM $table WHERE email = ?");
-            $stmt->execute([$email]);
-            $email_exists = $stmt->fetchColumn() > 0;
+            $table = ($user_type == 'prof') ? 'prof' : 'etudiant';
+            $sql_check = "SELECT id FROM $table WHERE email = :email";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->bindParam(':email', $email);
+            $stmt_check->execute();
             
-            // Vérifier aussi dans l'autre table
-            $other_table = ($user_type === 'professeur') ? 'etudiants' : 'professeurs';
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM $other_table WHERE email = ?");
-            $stmt->execute([$email]);
-            $email_exists_other = $stmt->fetchColumn() > 0;
-            
-            if ($email_exists || $email_exists_other) {
-                $error = "Cette adresse email est déjà utilisée.";
+            if ($stmt_check->rowCount() > 0) {
+                $error = 'Cet email est déjà utilisé.';
             } else {
                 // Hasher le mot de passe
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insérer le nouvel utilisateur
-                $stmt = $pdo->prepare("INSERT INTO $table (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$nom, $prenom, $email, $hashed_password]);
+                $sql_insert = "INSERT INTO $table (nom, prenom, email, mot_de_passe, date_creation) VALUES (:nom, :prenom, :email, :password, NOW())";
+                $stmt_insert = $pdo->prepare($sql_insert);
+                $stmt_insert->bindParam(':nom', $nom);
+                $stmt_insert->bindParam(':prenom', $prenom);
+                $stmt_insert->bindParam(':email', $email);
+                $stmt_insert->bindParam(':password', $hashed_password);
                 
-                $success = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
-                
-                // Optionnel : redirection automatique après quelques secondes
-                header("refresh:3;url=login.php");
+                if ($stmt_insert->execute()) {
+                    $success = 'Inscription réussie ! Vous pouvez maintenant vous connecter.';
+                } else {
+                    $error = 'Erreur lors de l\'inscription.';
+                }
             }
-        } catch (PDOException $e) {
-            $error = "Erreur lors de l'inscription. Veuillez réessayer.";
+        } catch(PDOException $e) {
+            $error = 'Erreur lors de l\'inscription : ' . $e->getMessage();
         }
     }
 }
@@ -67,145 +62,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription - Plateforme de Cours</title>
+    <title>Inscription - Plateforme de cours</title>
     <style>
-        * {
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
-            padding: 20px;
+            align-items: center;
+            min-height: 100vh;
         }
-        
         .signin-container {
             background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             width: 100%;
-            max-width: 500px;
+            max-width: 450px;
         }
-        
         .signin-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
         }
-        
         .signin-header h1 {
             color: #333;
-            font-size: 28px;
-            margin-bottom: 10px;
+            margin-bottom: 0.5rem;
         }
-        
-        .signin-header p {
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
         .form-group {
-            margin-bottom: 20px;
-            flex: 1;
+            margin-bottom: 1rem;
         }
-        
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: bold;
         }
-        
-        .form-group input,
-        .form-group select {
+        input, select {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
         }
-        
-        .form-group input:focus,
-        .form-group select:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #667eea;
         }
-        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 0.75rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 5px;
+            font-size: 1rem;
             cursor: pointer;
             transition: transform 0.2s;
         }
-        
         .btn:hover {
             transform: translateY(-2px);
         }
-        
         .error {
-            background-color: #fee;
+            background: #fee;
             color: #c33;
-            padding: 10px;
+            padding: 0.75rem;
             border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
             border: 1px solid #fcc;
         }
-        
         .success {
-            background-color: #efe;
-            color: #3c3;
-            padding: 10px;
+            background: #efe;
+            color: #383;
+            padding: 0.75rem;
             border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
             border: 1px solid #cfc;
         }
-        
-        .login-link {
+        .links {
             text-align: center;
-            margin-top: 20px;
-            color: #666;
+            margin-top: 1rem;
         }
-        
-        .login-link a {
+        .links a {
             color: #667eea;
             text-decoration: none;
-            font-weight: 600;
         }
-        
-        .login-link a:hover {
+        .links a:hover {
             text-decoration: underline;
-        }
-        
-        .password-requirements {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        @media (max-width: 600px) {
-            .form-row {
-                flex-direction: column;
-                gap: 0;
-            }
         }
     </style>
 </head>
@@ -213,62 +165,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="signin-container">
         <div class="signin-header">
             <h1>Inscription</h1>
-            <p>Créez votre compte sur la plateforme</p>
+            <p>Créez votre compte</p>
         </div>
         
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
         <?php if ($success): ?>
-            <div class="success"><?php echo $success; ?></div>
+            <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
         
-        <form method="POST" action="">
+        <form method="POST">
             <div class="form-group">
-                <label for="user_type">Type d'utilisateur</label>
-                <select id="user_type" name="user_type" required>
-                    <option value="">Sélectionnez votre profil</option>
-                    <option value="etudiant" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] === 'etudiant') ? 'selected' : ''; ?>>Étudiant</option>
-                    <option value="professeur" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] === 'professeur') ? 'selected' : ''; ?>>Professeur</option>
+                <label for="user_type">Type de compte :</label>
+                <select name="user_type" id="user_type" required>
+                    <option value="">Choisissez votre type de compte</option>
+                    <option value="etudiant" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] == 'etudiant') ? 'selected' : ''; ?>>Étudiant</option>
+                    <option value="prof" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] == 'prof') ? 'selected' : ''; ?>>Professeur</option>
                 </select>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="nom">Nom</label>
+                    <label for="nom">Nom :</label>
                     <input type="text" id="nom" name="nom" value="<?php echo isset($_POST['nom']) ? htmlspecialchars($_POST['nom']) : ''; ?>" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="prenom">Prénom</label>
+                    <label for="prenom">Prénom :</label>
                     <input type="text" id="prenom" name="prenom" value="<?php echo isset($_POST['prenom']) ? htmlspecialchars($_POST['prenom']) : ''; ?>" required>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="email">Email</label>
+                <label for="email">Email :</label>
                 <input type="email" id="email" name="email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
             </div>
             
             <div class="form-group">
-                <label for="password">Mot de passe</label>
+                <label for="password">Mot de passe :</label>
                 <input type="password" id="password" name="password" required>
-                <div class="password-requirements">
-                    Minimum 6 caractères
-                </div>
+                <small style="color: #666;">Minimum 6 caractères</small>
             </div>
             
             <div class="form-group">
-                <label for="confirm_password">Confirmer le mot de passe</label>
+                <label for="confirm_password">Confirmer le mot de passe :</label>
                 <input type="password" id="confirm_password" name="confirm_password" required>
             </div>
             
             <button type="submit" class="btn">S'inscrire</button>
         </form>
         
-        <div class="login-link">
-            Déjà un compte ? <a href="login.php">Se connecter</a>
+        <div class="links">
+            <p>Déjà un compte ? <a href="login.php">Se connecter</a></p>
         </div>
     </div>
 </body>

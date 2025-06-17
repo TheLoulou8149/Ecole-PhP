@@ -1,5 +1,5 @@
 <?php
-require_once 'config.php';
+session_start();
 
 // Détruire toutes les variables de session
 session_unset();
@@ -7,11 +7,7 @@ session_unset();
 // Détruire la session
 session_destroy();
 
-// Supprimer le cookie de session
-if (isset($_COOKIE[session_name()])) {
-    setcookie(session_name(), '', time()-3600, '/');
-}
-
 // Rediriger vers la page de connexion
-redirect('login.php');
+header('Location: login.php?message=disconnected');
+exit();
 ?>

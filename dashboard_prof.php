@@ -1,8 +1,13 @@
 <?php
-require_once 'auth_check.php';
-requireLogin();
+require_once 'config.php';
 
-$user = getCurrentUser();
+// Vérifier si l'utilisateur est connecté et est un professeur
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'prof') {
+    header('Location: login.php');
+    exit();
+}
+
+$user_name = $_SESSION['prenom'] . ' ' . $_SESSION['nom'];
 ?>
 
 <!DOCTYPE html>
@@ -10,267 +15,183 @@ $user = getCurrentUser();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - Professeur</title>
+    <title>Tableau de bord Professeur</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
         }
-        
         .header {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
+        .header h1 {
+            font-size: 1.5rem;
         }
-        
         .user-info {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 1rem;
         }
-        
         .logout-btn {
             background: rgba(255,255,255,0.2);
             color: white;
-            border: none;
-            padding: 10px 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem;
             border-radius: 5px;
             text-decoration: none;
-            transition: background-color 0.3s;
+            transition: background 0.3s;
         }
-        
         .logout-btn:hover {
             background: rgba(255,255,255,0.3);
         }
-        
         .container {
             max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
+            margin: 2rem auto;
+            padding: 0 2rem;
         }
-        
         .welcome-card {
             background: white;
-            padding: 30px;
+            padding: 2rem;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
         }
-        
-        .welcome-card h1 {
+        .welcome-card h2 {
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 1rem;
         }
-        
-        .welcome-card p {
-            color: #666;
-            font-size: 16px;
-        }
-        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        
         .stat-card {
             background: white;
-            padding: 25px;
+            padding: 1.5rem;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
-        .stat-number {
-            font-size: 36px;
-            font-weight: bold;
-            color: #764ba2;
-            margin-bottom: 10px;
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
         }
-        
-        .stat-label {
+        .stat-card p {
             color: #666;
-            font-size: 14px;
         }
-        
-        .section {
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .action-card {
             background: white;
-            padding: 30px;
+            padding: 1.5rem;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
-        .section-title {
+        .action-card h3 {
             color: #333;
-            margin-bottom: 20px;
-            font-size: 20px;
+            margin-bottom: 1rem;
         }
-        
-        .course-item {
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            transition: box-shadow 0.3s;
-        }
-        
-        .course-item:hover {
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-        
-        .course-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .course-description {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        .action-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 0.75rem 1.5rem;
             border-radius: 5px;
-            cursor: pointer;
             text-decoration: none;
             display: inline-block;
+            margin-top: 1rem;
+            cursor: pointer;
             transition: transform 0.2s;
         }
-        
-        .btn:hover {
+        .action-btn:hover {
             transform: translateY(-2px);
-        }
-        
-        .student-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        
-        .student-name {
-            font-weight: 500;
-            color: #333;
-        }
-        
-        .student-progress {
-            color: #666;
-            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="header-content">
-            <div class="logo">Plateforme de Cours</div>
-            <div class="user-info">
-                <span>Bonjour, <?php echo htmlspecialchars($user['name']); ?> (Professeur)</span>
-                <a href="logout.php" class="logout-btn">Déconnexion</a>
-            </div>
+        <h1>Plateforme de Cours - Professeur</h1>
+        <div class="user-info">
+            <span>Bonjour, <?php echo htmlspecialchars($user_name); ?></span>
+            <a href="logout.php" class="logout-btn">Déconnexion</a>
         </div>
     </div>
-    
+
     <div class="container">
         <div class="welcome-card">
-            <h1>Tableau de bord - Professeur</h1>
-            <p>Gérez vos cours, suivez les progrès de vos étudiants et créez du contenu pédagogique.</p>
+            <h2>Bienvenue dans votre espace professeur</h2>
+            <p>Gérez vos cours, vos étudiants et suivez leurs progrès depuis ce tableau de bord.</p>
         </div>
-        
+
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number">8</div>
-                <div class="stat-label">Cours créés</div>
+                <h3>5</h3>
+                <p>Cours actifs</p>
             </div>
             <div class="stat-card">
-                <div class="stat-number">156</div>
-                <div class="stat-label">Étudiants inscrits</div>
+                <h3>42</h3>
+                <p>Étudiants inscrits</p>
             </div>
             <div class="stat-card">
-                <div class="stat-number">89%</div>
-                <div class="stat-label">Taux de réussite</div>
+                <h3>12</h3>
+                <p>Devoirs à corriger</p>
             </div>
             <div class="stat-card">
-                <div class="stat-number">24</div>
-                <div class="stat-label">Heures d'enseignement</div>
+                <h3>98%</h3>
+                <p>Taux de satisfaction</p>
             </div>
         </div>
-        
-        <div class="section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 class="section-title" style="margin-bottom: 0;">Mes Cours</h2>
-                <a href="#" class="btn">Créer un nouveau cours</a>
+
+        <div class="actions-grid">
+            <div class="action-card">
+                <h3>Mes Cours</h3>
+                <p>Créez, modifiez et gérez vos cours en ligne. Ajoutez du contenu, des vidéos et des ressources.</p>
+                <a href="#" class="action-btn">Gérer les cours</a>
             </div>
-            
-            <div class="course-item">
-                <div class="course-title">Mathématiques Avancées</div>
-                <div class="course-description">32 étudiants inscrits - Dernière mise à jour: 15 juin 2025</div>
+
+            <div class="action-card">
+                <h3>Mes Étudiants</h3>
+                <p>Consultez la liste de vos étudiants, suivez leurs progrès et communiquez avec eux.</p>
+                <a href="#" class="action-btn">Voir les étudiants</a>
             </div>
-            
-            <div class="course-item">
-                <div class="course-title">Programmation Web</div>
-                <div class="course-description">45 étudiants inscrits - Dernière mise à jour: 14 juin 2025</div>
+
+            <div class="action-card">
+                <h3>Devoirs & Évaluations</h3>
+                <p>Créez des devoirs, des quiz et évaluez le travail de vos étudiants.</p>
+                <a href="#" class="action-btn">Gérer les devoirs</a>
             </div>
-            
-            <div class="course-item">
-                <div class="course-title">Base de données</div>
-                <div class="course-description">28 étudiants inscrits - Dernière mise à jour: 12 juin 2025</div>
+
+            <div class="action-card">
+                <h3>Messages</h3>
+                <p>Consultez vos messages et communiquez avec vos étudiants et collègues.</p>
+                <a href="#" class="action-btn">Voir les messages</a>
             </div>
-        </div>
-        
-        <div class="section">
-            <h2 class="section-title">Étudiants récents</h2>
-            
-            <div class="student-item">
-                <div>
-                    <div class="student-name">Pierre Durand</div>
-                    <div class="student-progress">Mathématiques Avancées - 85% terminé</div>
-                </div>
-                <a href="#" class="btn">Voir le profil</a>
+
+            <div class="action-card">
+                <h3>Statistiques</h3>
+                <p>Analysez les performances de vos cours et le progrès de vos étudiants.</p>
+                <a href="#" class="action-btn">Voir les stats</a>
             </div>
-            
-            <div class="student-item">
-                <div>
-                    <div class="student-name">Marie Martin</div>
-                    <div class="student-progress">Programmation Web - 92% terminé</div>
-                </div>
-                <a href="#" class="btn">Voir le profil</a>
-            </div>
-            
-            <div class="student-item">
-                <div>
-                    <div class="student-name">Jean Dubois</div>
-                    <div class="student-progress">Base de données - 67% terminé</div>
-                </div>
-                <a href="#" class="btn">Voir le profil</a>
+
+            <div class="action-card">
+                <h3>Mon Profil</h3>
+                <p>Modifiez vos informations personnelles et préférences de compte.</p>
+                <a href="#" class="action-btn">Éditer le profil</a>
             </div>
         </div>
     </div>
