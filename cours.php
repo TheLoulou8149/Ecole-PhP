@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes Cours - École</title>
+    <?php
+$page_title = "Mes cours - École";
+$header_gradient = "linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)";
+include 'header.php';
+?>
     <style>
         * {
             margin: 0;
@@ -487,5 +492,8 @@
             loadCoursList();
         });
     </script>
+
+    <?php include 'footer.php'; ?>
+
 </body>
 </html>
