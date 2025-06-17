@@ -4,11 +4,14 @@ require_once 'config.php';
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['id_etudiant'])) {
-    header('Location: login.php');
-    exit();
+    // Pour les tests, utiliser un ID fixe (à supprimer en production)
+    echo "<div style='background: orange; color: white; padding: 10px; text-align: center;'>
+            <strong>MODE TEST:</strong> Aucune session trouvée, utilisation de l'étudiant ID=1 pour les tests
+          </div>";
+    $id_etudiant = 1; // ID de test - SUPPRIMER EN PRODUCTION
+} else {
+    $id_etudiant = $_SESSION['id_etudiant'];
 }
-
-$id_etudiant = $_SESSION['id_etudiant'];
 
 try {
     // Récupérer les informations de l'étudiant
@@ -52,8 +55,8 @@ try {
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #8b5cf6 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -61,177 +64,267 @@ try {
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: white;
-            padding: 30px;
+        .welcome-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
             text-align: center;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .profile-pic {
-            width: 120px;
-            height: 120px;
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            margin: 0 auto 20px;
+            background: rgba(255, 255, 255, 0.25);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
-            font-weight: bold;
+            font-size: 36px;
+            font-weight: 700;
+            margin: 0 auto 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+        .welcome-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .header p {
-            font-size: 1.2em;
+        .welcome-subtitle {
+            font-size: 1.2rem;
             opacity: 0.9;
+            font-weight: 400;
         }
 
-        .content {
-            padding: 40px;
-        }
-
-        .info-section {
-            margin-bottom: 40px;
-        }
-
-        .section-title {
-            font-size: 1.8em;
-            color: #4f46e5;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #e5e7eb;
-        }
-
-        .info-grid {
+        .profile-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
             margin-bottom: 30px;
         }
 
-        .info-card {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #4f46e5;
+        .profile-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .info-label {
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 5px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
         }
 
         .info-value {
-            color: #6b7280;
-            font-size: 1.1em;
+            font-weight: 600;
+            color: white;
+            font-size: 1rem;
         }
 
-        .cours-list {
+        .courses-section {
+            margin-top: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            font-size: 20px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .courses-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
         }
 
-        .cours-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
+        .course-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
 
-        .cours-card:hover {
+        .course-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .cours-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #1f2937;
-            margin-bottom: 10px;
+        .course-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
         }
 
-        .cours-info {
+        .course-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.3;
+            flex: 1;
+            margin-right: 12px;
+        }
+
+        .platform-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .course-details {
+            space-y: 8px;
+        }
+
+        .course-detail {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
+            font-size: 0.95rem;
         }
 
-        .cours-info span {
-            color: #6b7280;
+        .course-detail-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
         }
 
-        .platform-badge {
-            background: #4f46e5;
+        .course-detail-value {
             color: white;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
+            font-weight: 600;
         }
 
-        .no-cours {
+        .no-courses {
             text-align: center;
-            color: #6b7280;
-            font-style: italic;
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 60px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
+        .no-courses-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .no-courses-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .test-notice {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background 0.2s;
-        }
-
-        .logout-btn:hover {
-            background: rgba(255,255,255,0.3);
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
         }
 
         @media (max-width: 768px) {
             .container {
-                margin: 10px;
-                border-radius: 10px;
+                padding: 0 10px;
             }
             
-            .header {
-                padding: 20px;
+            .welcome-section {
+                padding: 24px;
+                margin-bottom: 20px;
             }
             
-            .header h1 {
-                font-size: 2em;
+            .welcome-title {
+                font-size: 2rem;
             }
             
-            .content {
-                padding: 20px;
-            }
-            
-            .info-grid {
+            .profile-grid {
                 grid-template-columns: 1fr;
+                gap: 16px;
             }
             
-            .cours-list {
+            .profile-card {
+                padding: 20px;
+            }
+            
+            .courses-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -239,77 +332,124 @@ try {
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <a href="logout.php" class="logout-btn">Déconnexion</a>
-            <div class="profile-pic">
+        <!-- Message de test (à supprimer en production) -->
+        <?php if (!isset($_SESSION['id_etudiant'])): ?>
+        <div class="test-notice">
+            <strong>🧪 MODE TEST:</strong> Aucune session trouvée, utilisation de l'étudiant ID=1 pour les tests
+        </div>
+        <?php endif; ?>
+
+        <!-- Section de bienvenue -->
+        <div class="welcome-section">
+            <div class="profile-avatar">
                 <?php echo strtoupper(substr($etudiant['prenom'], 0, 1) . substr($etudiant['nom'], 0, 1)); ?>
             </div>
-            <h1><?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?></h1>
-            <p>Étudiant - ID: <?php echo htmlspecialchars($etudiant['id_etudiant']); ?></p>
+            <h1 class="welcome-title">Bienvenue, <?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?>!</h1>
+            <p class="welcome-subtitle">Consultez vos informations personnelles et suivez vos cours</p>
         </div>
 
-        <div class="content">
-            <div class="info-section">
-                <h2 class="section-title">Informations Personnelles</h2>
-                <div class="info-grid">
-                    <div class="info-card">
-                        <div class="info-label">Nom complet</div>
-                        <div class="info-value"><?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?></div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">Email</div>
-                        <div class="info-value"><?php echo htmlspecialchars($etudiant['email']); ?></div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">Date de naissance</div>
-                        <div class="info-value">
-                            <?php 
-                            $date = new DateTime($etudiant['date_naissance']);
-                            echo $date->format('d/m/Y');
-                            ?>
-                        </div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">Âge</div>
-                        <div class="info-value">
-                            <?php 
-                            $naissance = new DateTime($etudiant['date_naissance']);
-                            $aujourd_hui = new DateTime();
-                            $age = $aujourd_hui->diff($naissance)->y;
-                            echo $age . ' ans';
-                            ?>
-                        </div>
-                    </div>
+        <!-- Grille des informations profil -->
+        <div class="profile-grid">
+            <!-- Carte Informations personnelles -->
+            <div class="profile-card">
+                <div class="card-icon">👤</div>
+                <h3 class="card-title">Informations personnelles</h3>
+                <div class="info-item">
+                    <span class="info-label">Nom complet</span>
+                    <span class="info-value"><?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Email</span>
+                    <span class="info-value"><?php echo htmlspecialchars($etudiant['email']); ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Date de naissance</span>
+                    <span class="info-value">
+                        <?php 
+                        $date = new DateTime($etudiant['date_naissance']);
+                        echo $date->format('d/m/Y');
+                        ?>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Âge</span>
+                    <span class="info-value">
+                        <?php 
+                        $naissance = new DateTime($etudiant['date_naissance']);
+                        $aujourd_hui = new DateTime();
+                        $age = $aujourd_hui->diff($naissance)->y;
+                        echo $age . ' ans';
+                        ?>
+                    </span>
                 </div>
             </div>
 
-            <div class="info-section">
+            <!-- Carte Statistiques -->
+            <div class="profile-card">
+                <div class="card-icon">📊</div>
+                <h3 class="card-title">Mes statistiques</h3>
+                <div class="info-item">
+                    <span class="info-label">Nombre de cours</span>
+                    <span class="info-value"><?php echo count($cours); ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ID Étudiant</span>
+                    <span class="info-value">#<?php echo htmlspecialchars($etudiant['id_etudiant']); ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Statut</span>
+                    <span class="info-value">Actif</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Dernière connexion</span>
+                    <span class="info-value">Aujourd'hui</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section des cours -->
+        <div class="courses-section">
+            <div class="section-header">
+                <div class="section-icon">📚</div>
                 <h2 class="section-title">Mes Cours (<?php echo count($cours); ?>)</h2>
-                <?php if (empty($cours)): ?>
-                    <div class="no-cours">
-                        Aucun cours inscrit pour le moment.
-                    </div>
-                <?php else: ?>
-                    <div class="cours-list">
-                        <?php foreach ($cours as $c): ?>
-                            <div class="cours-card">
-                                <div class="cours-title"><?php echo htmlspecialchars($c['intitule']); ?></div>
-                                <div class="cours-info">
-                                    <span><strong>Matière:</strong> <?php echo htmlspecialchars($c['matiere_nom']); ?></span>
-                                    <span class="platform-badge"><?php echo htmlspecialchars($c['plateforme']); ?></span>
+            </div>
+            
+            <?php if (empty($cours)): ?>
+                <div class="no-courses">
+                    <div class="no-courses-icon">📭</div>
+                    <p class="no-courses-text">Aucun cours inscrit pour le moment.</p>
+                </div>
+            <?php else: ?>
+                <div class="courses-grid">
+                    <?php foreach ($cours as $c): ?>
+                        <div class="course-card">
+                            <div class="course-header">
+                                <h4 class="course-title"><?php echo htmlspecialchars($c['intitule']); ?></h4>
+                                <span class="platform-badge"><?php echo htmlspecialchars($c['plateforme']); ?></span>
+                            </div>
+                            <div class="course-details">
+                                <div class="course-detail">
+                                    <span class="course-detail-label">Matière</span>
+                                    <span class="course-detail-value"><?php echo htmlspecialchars($c['matiere_nom']); ?></span>
                                 </div>
-                                <div class="cours-info">
-                                    <span><strong>Professeur:</strong> <?php echo htmlspecialchars($c['prof_nom']); ?></span>
-                                    <span><strong>Date:</strong> <?php 
+                                <div class="course-detail">
+                                    <span class="course-detail-label">Professeur</span>
+                                    <span class="course-detail-value"><?php echo htmlspecialchars($c['prof_nom']); ?></span>
+                                </div>
+                                <div class="course-detail">
+                                    <span class="course-detail-label">Date</span>
+                                    <span class="course-detail-value">
+                                        <?php 
                                         $date = new DateTime($c['date']);
                                         echo $date->format('d/m/Y');
-                                    ?></span>
+                                        ?>
+                                    </span>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
