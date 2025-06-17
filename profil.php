@@ -2,13 +2,31 @@
 // Inclure le fichier de configuration
 require_once 'config.php';
 
+// Debug : Afficher tous les étudiants pour trouver Jean Dupont
+try {
+    $debug_stmt = $pdo->prepare("SELECT id_etudiant, nom, prenom FROM etudiants ORDER BY id_etudiant");
+    $debug_stmt->execute();
+    $tous_etudiants = $debug_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    echo "<div style='background: #1e40af; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;'>";
+    echo "<strong>🔍 LISTE DES ÉTUDIANTS DANS LA BASE :</strong><br>";
+    foreach ($tous_etudiants as $etud) {
+        echo "ID: " . $etud['id_etudiant'] . " - " . htmlspecialchars($etud['prenom'] . ' ' . $etud['nom']) . "<br>";
+    }
+    echo "</div>";
+} catch(PDOException $e) {
+    echo "<div style='background: red; color: white; padding: 10px;'>Erreur debug: " . $e->getMessage() . "</div>";
+}
+
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['id_etudiant'])) {
-    // Pour les tests, utiliser un ID fixe (à supprimer en production)
-    echo "<div style='background: orange; color: white; padding: 10px; text-align: center;'>
-            <strong>MODE TEST:</strong> Aucune session trouvée, utilisation de l'étudiant ID=1 pour les tests
+    // CHANGEZ CET ID SELON CE QUI S'AFFICHE CI-DESSUS POUR JEAN DUPONT
+    $id_etudiant = 1; // ← MODIFIEZ CE CHIFFRE avec l'ID de Jean Dupont
+    
+    echo "<div style='background: orange; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;'>
+            <strong>🧪 MODE TEST:</strong> Utilisation de l'étudiant ID=$id_etudiant pour les tests<br>
+            <small>Changez cette valeur ligne 25 du code avec l'ID correct de Jean Dupont</small>
           </div>";
-    $id_etudiant = 1; // ID de test - SUPPRIMER EN PRODUCTION
 } else {
     $id_etudiant = $_SESSION['id_etudiant'];
 }
@@ -20,7 +38,7 @@ try {
     $etudiant = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$etudiant) {
-        die("Étudiant non trouvé");
+        die("Étudiant non trouvé pour l'ID: $id_etudiant");
     }
 
     // Récupérer les cours de l'étudiant avec les détails
@@ -301,6 +319,15 @@ try {
             box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
         }
 
+        .debug-info {
+            background: #1e40af;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 0 10px;
@@ -332,13 +359,6 @@ try {
 </head>
 <body>
     <div class="container">
-        <!-- Message de test (à supprimer en production) -->
-        <?php if (!isset($_SESSION['id_etudiant'])): ?>
-        <div class="test-notice">
-            <strong>🧪 MODE TEST:</strong> Aucune session trouvée, utilisation de l'étudiant ID=1 pour les tests
-        </div>
-        <?php endif; ?>
-
         <!-- Section de bienvenue -->
         <div class="welcome-section">
             <div class="profile-avatar">
