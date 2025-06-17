@@ -14,8 +14,8 @@ require_once 'config.php';
 // Récupérer les informations de l'utilisateur
 //$user_id = $_SESSION['user_id'];
 //$user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'prof' ou 'etudiant'
-$user_id = user1;
-$user_type = etudiant;
+$user_id = 'user1';
+$user_type = 'etudiant';
 
 // Récupérer les infos selon le type d'utilisateur
 if ($user_type == 'prof') {
