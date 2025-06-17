@@ -24,23 +24,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
             
             // Rechercher l'utilisateur
-            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ? AND statut = 'actif'");
+            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
             // Vérifier le mot de passe
-            if ($user && password_verify($password, $user['mot_de_passe'])) {
+            if ($user && $password === $user['password']) {
                 // Connexion réussie
-                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_id'] = $user_type == 'professeur' ? $user['id_professeur'] : $user['id_etudiant'];
                 $_SESSION['user_type'] = $user_type;
                 $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
                 $_SESSION['user_email'] = $user['email'];
                 
                 // Redirection selon le type d'utilisateur
                 if ($user_type === 'professeur') {
-                    redirect('dashboard_professeur.php');
+                    header('Location: dashboard_professeur.php');
+                    exit();
                 } else {
-                    redirect('dashboard_etudiant.php');
+                    header('Location: dashboard_etudiant.php');
+                    exit();
                 }
             } else {
                 $error = "Email ou mot de passe incorrect.";
