@@ -1,4 +1,9 @@
 <?php
+// Fonction de redirection
+function redirect($url) {
+    header("Location: $url");
+    exit();
+}
 require_once 'config.php';
 require_once 'functions.php';
 
