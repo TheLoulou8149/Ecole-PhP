@@ -4,7 +4,7 @@ session_start();
 
 // Paramètres de connexion à la base de données
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'plateforme_cours');
+define('DB_NAME', 'etudiants'); // REMPLACEZ par le nom de votre base de données
 define('DB_USER', 'root'); // Remplacez par votre nom d'utilisateur MySQL
 define('DB_PASS', ''); // Remplacez par votre mot de passe MySQL
 

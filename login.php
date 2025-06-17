@@ -19,35 +19,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = getDBConnection();
             
             // Déterminer la table selon le type d'utilisateur
-            $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
+            // Remplacez ces noms par les vrais noms de vos tables
+            $table = ($user_type === 'professeur') ? 'profs' : 'etudiants'; // ADAPTEZ ICI
             
-            // Rechercher l'utilisateur
-            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ? AND statut = 'actif'");
+            // Rechercher l'utilisateur - ADAPTEZ les noms de colonnes selon votre BDD
+            $query = "SELECT * FROM $table WHERE email = ?";
+            $stmt = $pdo->prepare($query);
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
-            // Vérifier le mot de passe
-            if ($user && password_verify($password, $user['mot_de_passe'])) {
-                // Connexion réussie
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_type'] = $user_type;
-                $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
-                $_SESSION['user_email'] = $user['email'];
+            if ($user) {
+                // IMPORTANT : Adaptez cette partie selon votre structure
+                // Si vos mots de passe sont en clair (non hashés) :
+                $password_valid = ($user['mot_de_passe'] === $password); // Mot de passe en clair
                 
-                // Redirection selon le type d'utilisateur
-                if ($user_type === 'professeur') {
-                    redirect('dashboard_professeur.php');
+                // Si vos mots de passe sont hashés, utilisez plutôt :
+                // $password_valid = password_verify($password, $user['mot_de_passe']);
+                
+                if ($password_valid) {
+                    // Connexion réussie
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_type'] = $user_type;
+                    
+                    // Adaptez selon les noms de colonnes de votre BDD
+                    $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
+                    $_SESSION['user_email'] = $user['email'];
+                    
+                    // Redirection selon le type d'utilisateur
+                    if ($user_type === 'professeur') {
+                        redirect('dashboard_professeur.php');
+                    } else {
+                        redirect('dashboard_etudiant.php');
+                    }
                 } else {
-                    redirect('dashboard_etudiant.php');
+                    $error = "Email ou mot de passe incorrect.";
                 }
             } else {
                 $error = "Email ou mot de passe incorrect.";
             }
         } catch (PDOException $e) {
-            $error = "Erreur de connexion. Veuillez réessayer.";
+            $error = "Erreur de connexion : " . $e->getMessage();
+            // Pour déboguer, affichez l'erreur complète temporairement
         }
     }
 }
+
+// Fonction pour tester la connexion à la base
+function testConnection() {
+    try {
+        $pdo = getDBConnection();
+        echo "Connexion réussie !<br>";
+        
+        // Lister les tables disponibles
+        $stmt = $pdo->query("SHOW TABLES");
+        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        echo "Tables disponibles : " . implode(', ', $tables) . "<br>";
+        
+        return true;
+    } catch (Exception $e) {
+        echo "Erreur de connexion : " . $e->getMessage() . "<br>";
+        return false;
+    }
+}
+
+// Décommentez cette ligne pour tester la connexion
+// testConnection();
 ?>
 
 <!DOCTYPE html>
@@ -151,6 +187,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid #fcc;
         }
         
+        .debug-info {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        
         .signup-link {
             text-align: center;
             margin-top: 20px;
@@ -178,6 +223,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
+        
+        <!-- Informations de débogage -->
+        <div class="debug-info">
+            <strong>Instructions :</strong><br>
+            1. Modifiez config.php avec le nom de votre base de données<br>
+            2. Dans ce fichier, ligne 27, remplacez 'prof' et 'etudiant' par vos vrais noms de tables<br>
+            3. Vérifiez que les noms de colonnes correspondent (ligne 42)<br>
+            4. Décommentez la ligne 67 pour tester la connexion
+        </div>
         
         <form method="POST" action="">
             <div class="form-group">
