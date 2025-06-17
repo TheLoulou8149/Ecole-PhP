@@ -8,9 +8,83 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Récupérer les informations de l'utilisateur depuis la session
-$user_name = $_SESSION['user_name'] ?? 'Utilisateur';
-$user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
+// Inclure le fichier de connexion à la base de données
+require_once 'db.php';
+
+// Récupérer les informations de l'utilisateur
+$user_id = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'prof' ou 'etudiant'
+
+// Récupérer les infos selon le type d'utilisateur
+if ($user_type == 'prof') {
+    $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
+    $stmt->execute([$user_id]);
+    $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user_name = $user_data['nom'] ?? 'Professeur';
+} else {
+    $stmt = $pdo->prepare("SELECT nom, prenom FROM etudiants WHERE id_etudiant = ?");
+    $stmt->execute([$user_id]);
+    $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user_name = ($user_data['prenom'] ?? '') . ' ' . ($user_data['nom'] ?? 'Étudiant');
+}
+
+// Calculer les statistiques
+$stats = [];
+
+if ($user_type == 'prof') {
+    // Statistiques pour les professeurs
+    // Nombre de cours créés
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM cours WHERE id_prof = ?");
+    $stmt->execute([$user_id]);
+    $stats['cours_crees'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Nombre total d'étudiants inscrits à tous ses cours
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT ce.id_etudiant) as count 
+        FROM cours_etudiants ce 
+        JOIN cours c ON ce.id_cours = c.id_cours 
+        WHERE c.id_prof = ?
+    ");
+    $stmt->execute([$user_id]);
+    $stats['etudiants_inscrits'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Nombre de matières enseignées
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT c.id_matiere) as count 
+        FROM cours c 
+        WHERE c.id_prof = ?
+    ");
+    $stmt->execute([$user_id]);
+    $stats['matieres_enseignees'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Nouvelles inscriptions cette semaine (simulation)
+    $stats['nouvelles_inscriptions'] = rand(5, 20);
+    
+} else {
+    // Statistiques pour les étudiants
+    // Nombre de cours suivis
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM cours_etudiants WHERE id_etudiant = ?");
+    $stmt->execute([$user_id]);
+    $stats['cours_suivis'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Nombre de matières différentes
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT c.id_matiere) as count 
+        FROM cours_etudiants ce 
+        JOIN cours c ON ce.id_cours = c.id_cours 
+        WHERE ce.id_etudiant = ?
+    ");
+    $stmt->execute([$user_id]);
+    $stats['matieres_suivies'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Diplômes obtenus
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM diplomes WHERE id_etudiant = ?");
+    $stmt->execute([$user_id]);
+    $stats['diplomes_obtenus'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Progression simulée
+    $stats['progression'] = rand(60, 95);
+}
 ?>
 
 <!DOCTYPE html>
@@ -341,7 +415,7 @@ $user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
                     Bienvenue, <?php echo htmlspecialchars($user_name); ?>!
                 </h1>
                 <p class="welcome-subtitle">
-                    <?php if ($user_type == 'professeur'): ?>
+                    <?php if ($user_type == 'prof'): ?>
                         Gérez vos cours et suivez les candidatures de vos étudiants
                     <?php else: ?>
                         Découvrez de nouveaux cours et continuez votre apprentissage
@@ -355,7 +429,7 @@ $user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
                     <div class="action-icon">📚</div>
                     <h3 class="action-title">Consulter mes cours</h3>
                     <p class="action-description">
-                        <?php if ($user_type == 'professeur'): ?>
+                        <?php if ($user_type == 'prof'): ?>
                             Voir tous vos cours publiés et gérer les inscriptions
                         <?php else: ?>
                             Accéder à vos cours inscrits et voir vos progrès
@@ -371,7 +445,7 @@ $user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
                     </p>
                 </a>
 
-                <?php if ($user_type == 'professeur'): ?>
+                <?php if ($user_type == 'prof'): ?>
                 <a href="nouveau-cours.php" class="action-card">
                     <div class="action-icon">➕</div>
                     <h3 class="action-title">Créer un cours</h3>
@@ -395,39 +469,60 @@ $user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
                 <div class="stat-card">
                     <div class="stat-number">
                         <?php 
-                        // Ici vous pourrez ajouter une requête pour compter les cours
-                        echo $user_type == 'professeur' ? '8' : '5'; 
+                        if ($user_type == 'prof') {
+                            echo $stats['cours_crees'];
+                        } else {
+                            echo $stats['cours_suivis'];
+                        }
                         ?>
                     </div>
                     <div class="stat-label">
-                        <?php echo $user_type == 'professeur' ? 'Cours créés' : 'Cours suivis'; ?>
+                        <?php echo $user_type == 'prof' ? 'Cours créés' : 'Cours suivis'; ?>
                     </div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-number">
-                        <?php echo $user_type == 'professeur' ? '42' : '12'; ?>
+                        <?php 
+                        if ($user_type == 'prof') {
+                            echo $stats['etudiants_inscrits'];
+                        } else {
+                            echo $stats['matieres_suivies'];
+                        }
+                        ?>
                     </div>
                     <div class="stat-label">
-                        <?php echo $user_type == 'professeur' ? 'Étudiants inscrits' : 'Heures d\'étude'; ?>
+                        <?php echo $user_type == 'prof' ? 'Étudiants inscrits' : 'Matières suivies'; ?>
                     </div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-number">
-                        <?php echo $user_type == 'professeur' ? '4.8' : '85%'; ?>
+                        <?php 
+                        if ($user_type == 'prof') {
+                            echo $stats['matieres_enseignees'];
+                        } else {
+                            echo $stats['progression'] . '%';
+                        }
+                        ?>
                     </div>
                     <div class="stat-label">
-                        <?php echo $user_type == 'professeur' ? 'Note moyenne' : 'Progression'; ?>
+                        <?php echo $user_type == 'prof' ? 'Matières enseignées' : 'Progression moyenne'; ?>
                     </div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-number">
-                        <?php echo $user_type == 'professeur' ? '15' : '3'; ?>
+                        <?php 
+                        if ($user_type == 'prof') {
+                            echo $stats['nouvelles_inscriptions'];
+                        } else {
+                            echo $stats['diplomes_obtenus'];
+                        }
+                        ?>
                     </div>
                     <div class="stat-label">
-                        <?php echo $user_type == 'professeur' ? 'Nouvelles candidatures' : 'Certificats obtenus'; ?>
+                        <?php echo $user_type == 'prof' ? 'Nouvelles inscriptions' : 'Diplômes obtenus'; ?>
                     </div>
                 </div>
             </section>
@@ -435,7 +530,7 @@ $user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'professeur' ou 'etudiant'
             <!-- Main CTA -->
             <section class="main-cta">
                 <a href="cours.php" class="btn-primary">
-                    <?php echo $user_type == 'professeur' ? 'Gérer mes cours' : 'Voir mes cours'; ?>
+                    <?php echo $user_type == 'prof' ? 'Gérer mes cours' : 'Voir mes cours'; ?>
                 </a>
             </section>
         </div>
