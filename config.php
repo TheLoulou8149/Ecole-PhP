@@ -4,7 +4,7 @@ session_start();
 // Paramètres de connexion
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'ecole');
-define('DB_USER', 'root');
+define('DB_USER', 'colin');
 define('DB_PASS', '');
 
 // Fonction de connexion PDO
