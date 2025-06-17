@@ -1,5 +1,4 @@
 <?php
-session_start();
 
 // Paramètres de connexion
 define('DB_HOST', '10.96.16.82');
