@@ -1,9 +1,9 @@
 <?php
 // Connexion à la base de données (à adapter selon tes identifiants)
-$host = 'localhost';
-$dbname = 'nom_de_ta_base';
-$user = 'utilisateur';
-$pass = 'mot_de_passe';
+$host = '10.96.16.82';
+$dbname = 'ecole';
+$user = 'colin';
+$pass = '';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
