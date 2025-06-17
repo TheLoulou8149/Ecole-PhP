@@ -3,17 +3,19 @@
 session_start();
 
 // Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit();
-}
+//if (!isset($_SESSION['user_id'])) {
+//    header('Location: login.php');
+//    exit();
+//}
 
 // Inclure le fichier de connexion à la base de données
 require_once 'config.php';
 
 // Récupérer les informations de l'utilisateur
-$user_id = $_SESSION['user_id'];
-$user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'prof' ou 'etudiant'
+//$user_id = $_SESSION['user_id'];
+//$user_type = $_SESSION['user_type'] ?? 'etudiant'; // 'prof' ou 'etudiant'
+$user_id = user1;
+$user_type = etudiant;
 
 // Récupérer les infos selon le type d'utilisateur
 if ($user_type == 'prof') {
