@@ -4,17 +4,12 @@ require_once 'config.php';
 require_once 'functions.php';
 
 $error = '';
-$debug = ''; // Pour le debugging
 
 // Traitement du formulaire de connexion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = sanitize($_POST['email']);
     $password = $_POST['password'];
     $user_type = $_POST['user_type'];
-    
-    // Debug : afficher les données reçues
-    $debug .= "Email: $email<br>";
-    $debug .= "Type: $user_type<br>";
     
     // Validation des données
     if (empty($email) || empty($password) || empty($user_type)) {
@@ -27,77 +22,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Déterminer la table selon le type d'utilisateur
             $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
-            $debug .= "Table utilisée: $table<br>";
             
-            // Rechercher l'utilisateur - CORRECTION: utiliser des requêtes préparées sécurisées
-            $sql = "SELECT * FROM `$table` WHERE email = ? AND statut = 'actif'";
-            $stmt = $pdo->prepare($sql);
+            // Rechercher l'utilisateur
+            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ? AND statut = 'actif'");
             $stmt->execute([$email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $user = $stmt->fetch();
             
-            $debug .= "Utilisateur trouvé: " . ($user ? "Oui" : "Non") . "<br>";
-            
-            if ($user) {
-                $debug .= "Hash en BDD: " . $user['mot_de_passe'] . "<br>";
-                $debug .= "Mot de passe saisi: $password<br>";
+            // Vérifier le mot de passe
+            if ($user && password_verify($password, $user['mot_de_passe'])) {
+                // Connexion réussie
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_type'] = $user_type;
+                $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
+                $_SESSION['user_email'] = $user['email'];
                 
-                // Vérifier le mot de passe
-                $password_check = password_verify($password, $user['mot_de_passe']);
-                $debug .= "Vérification mot de passe: " . ($password_check ? "OK" : "ECHEC") . "<br>";
-                
-                if ($password_check) {
-                    // Connexion réussie
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['user_type'] = $user_type;
-                    $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
-                    $_SESSION['user_email'] = $user['email'];
-                    
-                    // Redirection selon le type d'utilisateur
-                    if ($user_type === 'professeur') {
-                        header('Location: dashboard_professeur.php');
-                        exit();
-                    } else {
-                        header('Location: dashboard_etudiant.php');
-                        exit();
-                    }
+                // Redirection selon le type d'utilisateur
+                if ($user_type === 'professeur') {
+                    redirect('dashboard_professeur.php');
                 } else {
-                    // Vérification alternative si le mot de passe n'est pas hashé
-                    if ($password === $user['mot_de_passe']) {
-                        $debug .= "Mot de passe en clair détecté!<br>";
-                        // Connexion réussie avec mot de passe en clair
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['user_type'] = $user_type;
-                        $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
-                        $_SESSION['user_email'] = $user['email'];
-                        
-                        if ($user_type === 'professeur') {
-                            header('Location: dashboard_professeur.php');
-                            exit();
-                        } else {
-                            header('Location: dashboard_etudiant.php');
-                            exit();
-                        }
-                    } else {
-                        $error = "Email ou mot de passe incorrect.";
-                    }
+                    redirect('dashboard_etudiant.php');
                 }
             } else {
-                // Vérifier si l'utilisateur existe sans le filtre statut
-                $sql_check = "SELECT * FROM `$table` WHERE email = ?";
-                $stmt_check = $pdo->prepare($sql_check);
-                $stmt_check->execute([$email]);
-                $user_check = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                
-                if ($user_check) {
-                    $debug .= "Utilisateur trouvé mais statut: " . ($user_check['statut'] ?? 'NULL') . "<br>";
-                    $error = "Compte inactif ou en attente de validation.";
-                } else {
-                    $error = "Email ou mot de passe incorrect.";
-                }
+                $error = "Email ou mot de passe incorrect.";
             }
         } catch (PDOException $e) {
             $error = "Erreur de connexion. Veuillez réessayer.";
-            $debug .= "Erreur PDO: " . $e->getMessage() . "<br>";
         }
     }
 }
@@ -204,16 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid #fcc;
         }
         
-        .debug {
-            background-color: #e8f4fd;
-            color: #333;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #bde4ff;
-            font-size: 12px;
-        }
-        
         .signup-link {
             text-align: center;
             margin-top: 20px;
@@ -239,14 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <?php if ($error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        
-        <?php if ($debug && $_SERVER['REQUEST_METHOD'] === 'POST'): ?>
-            <div class="debug">
-                <strong>Debug Info:</strong><br>
-                <?php echo $debug; ?>
-            </div>
+            <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
         
         <form method="POST" action="">
