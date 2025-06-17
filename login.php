@@ -1,9 +1,11 @@
 <?php
-// Partie de votre code login.php corrigée
+session_start();
+require_once 'config.php'; // Inclut la connexion à la base de données via $pdo
 
 // Récupération des données du formulaire
 $email = $_POST['email'] ?? '';
 $password = $_POST['password'] ?? '';
+$error = '';
 
 // Requête pour vérifier dans la table prof
 $stmt_prof = $pdo->prepare("SELECT * FROM prof WHERE email = ?");
@@ -16,30 +18,33 @@ $stmt_etudiant->execute([$email]);
 $etudiant = $stmt_etudiant->fetch();
 
 if ($prof) {
-    // Vérification du mot de passe pour prof
     if (password_verify($password, $prof['password'])) {
-        // Connexion réussie pour prof
+        // Connexion réussie pour un prof
         $_SESSION['user_id'] = $prof['id'];
         $_SESSION['user_type'] = 'prof';
         $_SESSION['user_name'] = $prof['nom'];
         header('Location: dashboard_prof.php');
         exit();
     } else {
-        $error = "Mot de passe incorrect";
+        $error = "Mot de passe incorrect pour le professeur.";
     }
 } elseif ($etudiant) {
-    // Vérification du mot de passe pour étudiant
     if (password_verify($password, $etudiant['password'])) {
-        // Connexion réussie pour étudiant
+        // Connexion réussie pour un étudiant
         $_SESSION['user_id'] = $etudiant['id'];
         $_SESSION['user_type'] = 'etudiant';
         $_SESSION['user_name'] = $etudiant['nom'];
         header('Location: dashboard_etudiant.php');
         exit();
     } else {
-        $error = "Mot de passe incorrect";
+        $error = "Mot de passe incorrect pour l'étudiant.";
     }
 } else {
-    $error = "Email non trouvé";
+    $error = "Email non trouvé.";
+}
+
+// Affichage d’un message d’erreur s’il y en a un
+if ($error) {
+    echo "<p style='color: red;'>$error</p>";
 }
 ?>
