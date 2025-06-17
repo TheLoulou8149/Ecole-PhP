@@ -1,9 +1,9 @@
 <?php
-$host = 'localhost';
-$db   = 'nom_de_ta_bdd';
-$user = 'root';
+$host = '10.96.16.82';
+$db   = 'ecole';
+$user = 'colin';
 $pass = '';
-$dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
+$dsn = "mysql:host=$host;port=3306;dbname=$db;charset=utf8mb4";
 
 try {
     $pdo = new PDO($dsn, $user, $pass);
