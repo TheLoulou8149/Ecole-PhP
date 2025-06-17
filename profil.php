@@ -1,6 +1,5 @@
 <?php
-// Inclure le fichier de configuration
-require_once 'config.php';
+require_once 'config.php'; // doit être AVANT toute utilisation de $pdo
 
 // Debug : Afficher tous les étudiants pour trouver Jean Dupont
 try {
