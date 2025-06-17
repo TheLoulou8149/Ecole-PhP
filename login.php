@@ -6,12 +6,12 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $user_type = $_POST['user_type']; // 'prof' ou 'etudiant'
+    $user_type = $_POST['user_type']; // 'prof' ou 'etudiants'
     
     if (!empty($email) && !empty($password)) {
         try {
             // Choisir la table selon le type d'utilisateur
-            $table = ($user_type == 'prof') ? 'prof' : 'etudiant';
+            $table = ($user_type == 'prof') ? 'prof' : 'etudiants';
             
             // Requête pour trouver l'utilisateur
             $sql = "SELECT * FROM $table WHERE email = :email";
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <label for="user_type">Type de compte :</label>
                 <select name="user_type" id="user_type" required>
                     <option value="">Choisissez votre type de compte</option>
-                    <option value="etudiant">Étudiant</option>
+                    <option value="etudiants">Étudiants</option>
                     <option value="prof">Professeur</option>
                 </select>
             </div>
