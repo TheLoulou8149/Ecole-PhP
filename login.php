@@ -1,14 +1,14 @@
 <?php
 session_start();
-require_once 'config.php'; // Inclut la connexion à la base de données via $pdo
+require_once 'config.php'; // Inclut la connexion PDO
 
 // Récupération des données du formulaire
 $email = $_POST['email'] ?? '';
 $password = $_POST['password'] ?? '';
 $error = '';
 
-// Requête pour vérifier dans la table prof
-$stmt_prof = $pdo->prepare("SELECT * FROM prof WHERE email = ?");
+// Requête pour vérifier dans la table **profs**
+$stmt_prof = $pdo->prepare("SELECT * FROM profs WHERE email = ?");
 $stmt_prof->execute([$email]);
 $prof = $stmt_prof->fetch();
 
