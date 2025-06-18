@@ -2,7 +2,7 @@
 session_start();
 
 // Paramètres de connexion
-define('DB_HOST', 'localhost');
+define('DB_HOST', '10.96.16.82');
 define('DB_NAME', 'ecole');
 define('DB_USER', 'colin');
 define('DB_PASS', '');
