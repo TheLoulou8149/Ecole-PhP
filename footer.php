@@ -279,7 +279,7 @@
             <div class="footer-content">
                 <!-- Section principale -->
                 <div class="footer-main">
-                    <a href="main.php" class="footer-logo">EduConnect</a>
+                    <a href="index.php" class="footer-logo">EduConnect</a>
                     <p class="footer-tagline">Votre plateforme éducative connectée</p>
                     <p class="footer-description">
                         Découvrez une nouvelle façon d'apprendre avec nos cours interactifs, 
