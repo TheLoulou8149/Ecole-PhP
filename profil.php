@@ -1,45 +1,30 @@
 <?php
-// Démarrer la session si elle n'est pas déjà démarrée
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+// Démarrer la session
+session_start();
 
 // Vérifier si le fichier config.php existe
 if (!file_exists('config.php')) {
     die("Erreur : Le fichier config.php n'existe pas. Veuillez le créer avec la configuration de votre base de données.");
 }
 
-// Inclure le fichier de configuration
-require_once 'config.php';
+require_once 'config.php'; // Inclure le fichier de configuration
 
-// Vérifier si $pdo est bien défini après l'inclusion
-if (!isset($pdo) || $pdo === null) {
-    // Si $pdo n'est pas défini, essayer de créer la connexion ici
+// Si $pdo n'existe pas, essayer d'utiliser les variables de config.php
+if (!isset($pdo)) {
     try {
-        // Remplacez ces valeurs par vos paramètres de base de données
-        $host = 'localhost';
-        $dbname = 'ecole'; // Remplacez par le nom de votre base de données
-        $username = 'root'; // Remplacez par votre nom d'utilisateur
-        $password = ''; // Remplacez par votre mot de passe
-        
-        $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
-        $options = [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ];
-        
-        $pdo = new PDO($dsn, $username, $password, $options);
-        
-    } catch (PDOException $e) {
-        die("Erreur de connexion à la base de données : " . $e->getMessage() . 
-            "<br><br>Vérifiez votre fichier config.php ou les paramètres de connexion.");
+        // Essayer d'utiliser les variables définies dans config.php
+        if (isset($host, $dbname, $user, $pass)) {
+            $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } elseif (isset($servername, $database, $username, $password)) {
+            $pdo = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } else {
+            die("Erreur : Variables de connexion non trouvées dans config.php");
+        }
+    } catch(PDOException $e) {
+        die("Erreur de connexion : " . $e->getMessage());
     }
-}
-
-// Vérification finale de la connexion
-if (!$pdo) {
-    die("Erreur : Impossible d'établir la connexion à la base de données.");
 }
 
 // Debug : Afficher tous les étudiants pour trouver Jean Dupont
@@ -69,7 +54,7 @@ if (!isset($_SESSION['id_etudiant'])) {
     
     echo "<div style='background: orange; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;'>
             <strong>🧪 MODE TEST:</strong> Utilisation de l'étudiant ID=$id_etudiant pour les tests<br>
-            <small>Changez cette valeur ligne 49 du code avec l'ID correct de Jean Dupont</small>
+            <small>Changez cette valeur ligne 32 du code avec l'ID correct de Jean Dupont</small>
           </div>";
 } else {
     $id_etudiant = $_SESSION['id_etudiant'];
