@@ -38,10 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($stmt_check->rowCount() > 0) {
                 $error = 'Cet email est déjà utilisé.';
             } else {
-                // Hasher le mot de passe
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                
-                // Insérer le nouvel utilisateur
+                // Insérer le nouvel utilisateur (mot de passe en clair pour être cohérent avec login.php)
                 // Adapter les colonnes selon votre structure de base de données
                 if ($user_type == 'professeur') {
                     $sql_insert = "INSERT INTO professeurs (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
@@ -53,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt_insert->bindParam(':nom', $nom);
                 $stmt_insert->bindParam(':prenom', $prenom);
                 $stmt_insert->bindParam(':email', $email);
-                $stmt_insert->bindParam(':password', $hashed_password);
+                $stmt_insert->bindParam(':password', $password);
                 
                 if ($stmt_insert->execute()) {
                     $success = 'Inscription réussie ! Vous pouvez maintenant vous connecter.';
