@@ -11,7 +11,20 @@ $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
 try {
-    $pdo = getConnection();
+    $host = 'localhost';
+$db   = 'ecole';
+$user = 'colin';
+$pass = '';
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+$pdo = new PDO($dsn, $user, $pass, $options);
     
     // Récupérer les informations de l'utilisateur
     if ($user_type === 'etudiant') {
