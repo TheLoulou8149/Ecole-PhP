@@ -29,7 +29,7 @@ if (empty($_SESSION['id_etudiant'])) {
 $id_etudiant = (int) $_SESSION['id_etudiant'];
 
 // Inclure l'en-tête HTML ici
-include 'header.php';
+require_once 'header.php';
 
 // Bloc try/catch
 try {
@@ -497,5 +497,5 @@ try {
 
 <?php
 // Inclure le pied de page HTML ici
-include 'footer.php';
+require_once 'footer.php';
 ?>
