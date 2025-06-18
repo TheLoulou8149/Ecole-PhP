@@ -1,15 +1,23 @@
 <!-- Footer -->
 <footer>
     <div class="container">
-        <div class="footer-content">
-            <div class="footer-logo">
-                <a href="main.php" class="logo">EduConnect</a>
-                <p class="footer-slogan">Votre plateforme éducative connectée</p>
+        <div class="footer-grid">
+            <!-- Colonne Logo + Description -->
+            <div class="footer-brand">
+                <a href="main.php" class="footer-logo">EduConnect</a>
+                <p class="footer-tagline">Votre plateforme éducative connectée</p>
+                <div class="footer-social">
+                    <a href="#" aria-label="Facebook" class="social-link"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" aria-label="Twitter" class="social-link"><i class="fab fa-twitter"></i></a>
+                    <a href="#" aria-label="Instagram" class="social-link"><i class="fab fa-instagram"></i></a>
+                    <a href="#" aria-label="LinkedIn" class="social-link"><i class="fab fa-linkedin-in"></i></a>
+                </div>
             </div>
-            
+
+            <!-- Colonne Liens -->
             <div class="footer-links">
-                <div class="link-column">
-                    <h3>Navigation</h3>
+                <div class="links-group">
+                    <h3 class="links-title">Navigation</h3>
                     <ul>
                         <li><a href="main.php" class="footer-link">Accueil</a></li>
                         <li><a href="cours.php" class="footer-link">Mes Cours</a></li>
@@ -17,9 +25,9 @@
                         <li><a href="profil.php" class="footer-link">Profil</a></li>
                     </ul>
                 </div>
-                
-                <div class="link-column">
-                    <h3>Ressources</h3>
+
+                <div class="links-group">
+                    <h3 class="links-title">Ressources</h3>
                     <ul>
                         <li><a href="#" class="footer-link">Bibliothèque</a></li>
                         <li><a href="#" class="footer-link">FAQ</a></li>
@@ -27,9 +35,9 @@
                         <li><a href="#" class="footer-link">Support</a></li>
                     </ul>
                 </div>
-                
-                <div class="link-column">
-                    <h3>Légal</h3>
+
+                <div class="links-group">
+                    <h3 class="links-title">Légal</h3>
                     <ul>
                         <li><a href="#" class="footer-link">Mentions légales</a></li>
                         <li><a href="#" class="footer-link">CGU</a></li>
@@ -38,145 +46,198 @@
                     </ul>
                 </div>
             </div>
-            
-            <div class="footer-social">
-                <h3>Nous suivre</h3>
-                <div class="social-icons">
-                    <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
-                </div>
-            </div>
         </div>
-        
+
         <div class="footer-bottom">
-            <p>&copy; <?php echo date('Y'); ?> EduConnect. Tous droits réservés.</p>
-            <p>Version <?php echo $version ?? '1.0.0'; ?></p>
+            <p class="copyright">&copy; <?php echo date('Y'); ?> EduConnect. Tous droits réservés.</p>
+            <div class="legal-links">
+                <a href="#" class="legal-link">Politique de confidentialité</a>
+                <span class="separator">|</span>
+                <a href="#" class="legal-link">Conditions d'utilisation</a>
+            </div>
         </div>
     </div>
 </footer>
 
-<!-- Font Awesome pour les icônes -->
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-
-<script>
-    // Script pour le menu mobile (identique à celui du header)
-    function toggleMobileMenu() {
-        const navMenu = document.getElementById('navMenu');
-        navMenu.classList.toggle('active');
-    }
-</script>
-
 <style>
-    /* Styles pour le footer - complémentaires à ceux du header */
+    /* Styles modernes pour le footer */
     footer {
-        background: rgba(0, 0, 0, 0.2);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(12px);
         color: white;
-        padding: 3rem 0 1rem;
+        padding: 4rem 0 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
-    .footer-content {
+
+    .footer-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 2rem;
-        margin-bottom: 2rem;
+        grid-template-columns: 1.5fr 2fr;
+        gap: 3rem;
+        margin-bottom: 3rem;
     }
-    
-    .footer-logo .logo {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
+
+    .footer-brand {
+        display: flex;
+        flex-direction: column;
     }
-    
-    .footer-slogan {
+
+    .footer-logo {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: white;
+        text-decoration: none;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .footer-logo:hover {
+        opacity: 0.9;
+    }
+
+    .footer-tagline {
+        font-size: 1rem;
         opacity: 0.8;
-        font-size: 0.9rem;
+        margin-bottom: 2rem;
+        line-height: 1.6;
     }
-    
-    .link-column h3 {
-        font-size: 1.2rem;
+
+    .footer-social {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .social-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+        color: white;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .social-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-3px);
+    }
+
+    .footer-links {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    .links-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .links-title {
+        font-size: 1.1rem;
+        font-weight: 600;
         margin-bottom: 1.5rem;
         position: relative;
         padding-bottom: 0.5rem;
     }
-    
-    .link-column h3::after {
+
+    .links-title::after {
         content: '';
         position: absolute;
         left: 0;
         bottom: 0;
-        width: 50px;
+        width: 40px;
         height: 2px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.3);
     }
-    
-    .link-column ul {
+
+    .footer-links ul {
         list-style: none;
     }
-    
-    .link-column li {
+
+    .footer-links li {
         margin-bottom: 0.8rem;
     }
-    
+
     .footer-link {
-        color: rgba(255, 255, 255, 0.8);
+        color: rgba(255, 255, 255, 0.7);
         text-decoration: none;
+        font-size: 0.95rem;
         transition: all 0.3s ease;
-        font-size: 0.9rem;
+        position: relative;
     }
-    
+
     .footer-link:hover {
         color: white;
-        padding-left: 5px;
+        padding-left: 8px;
     }
-    
-    .footer-social h3 {
-        font-size: 1.2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .social-icons {
-        display: flex;
-        gap: 1rem;
-    }
-    
-    .social-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 35px;
-        height: 35px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        color: white;
+
+    .footer-link::before {
+        content: '→';
+        position: absolute;
+        left: -10px;
+        opacity: 0;
         transition: all 0.3s ease;
     }
-    
-    .social-icon:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-3px);
+
+    .footer-link:hover::before {
+        left: 0;
+        opacity: 1;
     }
-    
+
     .footer-bottom {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 1.5rem;
         display: flex;
         justify-content: space-between;
-        font-size: 0.8rem;
+        align-items: center;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .copyright {
+        font-size: 0.85rem;
         opacity: 0.7;
     }
-    
-    @media (max-width: 768px) {
-        .footer-content {
+
+    .legal-links {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .legal-link {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+
+    .legal-link:hover {
+        color: white;
+    }
+
+    .separator {
+        opacity: 0.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .footer-grid {
             grid-template-columns: 1fr;
+            gap: 2rem;
         }
-        
+    }
+
+    @media (max-width: 768px) {
+        .footer-links {
+            grid-template-columns: 1fr;
+            gap: 2.5rem;
+        }
+
         .footer-bottom {
             flex-direction: column;
+            gap: 1rem;
             text-align: center;
-            gap: 0.5rem;
         }
     }
 </style>
