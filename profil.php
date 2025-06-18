@@ -3,12 +3,15 @@
 require_once 'config.php';
 
 // Vérifier si l'utilisateur est connecté
-//if (!isset($_SESSION['id_etudiant'])) {
-//    header('Location: login.php');
-//    exit();
-//}
-
-$id_etudiant = $_SESSION['id_etudiant'];
+if (!isset($_SESSION['id_etudiant'])) {
+    // Pour les tests, utiliser un ID fixe (à supprimer en production)
+    echo "<div style='background: orange; color: white; padding: 10px; text-align: center;'>
+            <strong>MODE TEST:</strong> Aucune session trouvée, utilisation de l'étudiant ID=1 pour les tests
+          </div>";
+    $id_etudiant = 1; // ID de test - SUPPRIMER EN PRODUCTION
+} else {
+    $id_etudiant = $_SESSION['id_etudiant'];
+}
 
 try {
     // Récupérer les informations de l'étudiant
