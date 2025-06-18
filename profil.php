@@ -7,11 +7,24 @@ if (!file_exists('config.php')) {
     die("Erreur : Le fichier config.php n'existe pas. Veuillez le créer avec la configuration de votre base de données.");
 }
 
-require_once 'config.php'; // doit être APRÈS session_start()
+require_once 'config.php'; // Inclure le fichier de configuration
 
-// Vérifier si $pdo est bien défini
+// Si $pdo n'existe pas, essayer d'utiliser les variables de config.php
 if (!isset($pdo)) {
-    die("Erreur : La connexion à la base de données n'a pas pu être établie. Vérifiez votre fichier config.php.");
+    try {
+        // Essayer d'utiliser les variables définies dans config.php
+        if (isset($host, $dbname, $user, $pass)) {
+            $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } elseif (isset($servername, $database, $username, $password)) {
+            $pdo = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } else {
+            die("Erreur : Variables de connexion non trouvées dans config.php");
+        }
+    } catch(PDOException $e) {
+        die("Erreur de connexion : " . $e->getMessage());
+    }
 }
 
 // Debug : Afficher tous les étudiants pour trouver Jean Dupont
