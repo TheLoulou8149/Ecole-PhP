@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = getDBConnection();
             
             // Déterminer la table selon le type d'utilisateur
-            $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
+            $table = ($user_type === 'professeur') ? 'profs' : 'etudiants';
             
             // Rechercher l'utilisateur
             $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ?");
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Vérifier le mot de passe
             if ($user && $password === $user['password']) {
                 // Connexion réussie
-                $_SESSION['user_id'] = $user_type == 'professeur' ? $user['id_professeur'] : $user['id_etudiant'];
+                $_SESSION['user_id'] = $user_type == 'professeur' ? $user['id_prof'] : $user['id_etudiant'];
                 $_SESSION['user_type'] = $user_type;
                 $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
                 $_SESSION['user_email'] = $user['email'];

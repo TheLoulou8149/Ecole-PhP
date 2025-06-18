@@ -21,14 +21,64 @@ if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Vérifier si l'utilisateur est connecté
-if (empty($_SESSION['id_etudiant'])) {
+// Vérifier si l'utilisateur est connecté ET que c'est un étudiant
+if (empty($_SESSION['user_id']) || $_SESSION['user_type'] !== 'etudiant') {
     header('Location: login.php');
     exit();
 }
 
 // Récupérer l'ID de l'étudiant connecté
-$id_etudiant = (int) $_SESSION['id_etudiant'];
+$id_etudiant = (int) $_SESSION['user_id'];
+
+// Traitement de l'upload de photo
+$upload_message = '';
+if (isset($_POST['upload_photo']) && isset($_FILES['profile_photo'])) {
+    $upload_dir = 'uploads/profiles/';
+    
+    // Créer le dossier s'il n'existe pas
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+    
+    $file = $_FILES['profile_photo'];
+    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    $max_size = 2 * 1024 * 1024; // 2MB
+    
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        if (in_array($file['type'], $allowed_types) && $file['size'] <= $max_size) {
+            $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $new_filename = 'profile_' . $id_etudiant . '_' . time() . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+            
+            if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+                try {
+                    // Supprimer l'ancienne photo si elle existe
+                    $stmt = $pdo->prepare("SELECT photo_profil FROM etudiants WHERE id_etudiant = ?");
+                    $stmt->execute([$id_etudiant]);
+                    $old_photo = $stmt->fetchColumn();
+                    
+                    if ($old_photo && file_exists($old_photo)) {
+                        unlink($old_photo);
+                    }
+                    
+                    // Mettre à jour la base de données
+                    $stmt = $pdo->prepare("UPDATE etudiants SET photo_profil = ? WHERE id_etudiant = ?");
+                    $stmt->execute([$upload_path, $id_etudiant]);
+                    
+                    $upload_message = '<div class="success-message">Photo de profil mise à jour avec succès !</div>';
+                } catch (PDOException $e) {
+                    $upload_message = '<div class="error-message">Erreur lors de la mise à jour : ' . $e->getMessage() . '</div>';
+                }
+            } else {
+                $upload_message = '<div class="error-message">Erreur lors de l\'upload du fichier.</div>';
+            }
+        } else {
+            $upload_message = '<div class="error-message">Fichier non autorisé. Seules les images JPEG, PNG et GIF de moins de 2MB sont acceptées.</div>';
+        }
+    } else {
+        $upload_message = '<div class="error-message">Erreur lors de l\'upload : ' . $file['error'] . '</div>';
+    }
+}
 
 try {
     // Récupérer les informations de l'étudiant
@@ -95,8 +145,8 @@ try {
         }
 
         .profile-avatar {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.25);
             display: flex;
@@ -106,6 +156,114 @@ try {
             font-weight: 700;
             margin: 0 auto 20px;
             border: 3px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .profile-avatar:hover .avatar-overlay {
+            opacity: 1;
+        }
+
+        .photo-upload-form {
+            margin: 20px 0;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .file-input-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
         }
 
         .welcome-title {
@@ -307,24 +465,31 @@ try {
             font-weight: 500;
         }
 
-        .test-notice {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 16px 24px;
+            padding: 10px 20px;
+            border: none;
             border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
+            text-decoration: none;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .debug-info {
-            background: #1e40af;
-            color: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-family: monospace;
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            margin-top: 5px;
         }
 
         @media (max-width: 768px) {
@@ -353,16 +518,52 @@ try {
             .courses-grid {
                 grid-template-columns: 1fr;
             }
+
+            .logout-btn {
+                position: static;
+                display: block;
+                width: 100%;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+
+            .photo-upload-form {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="logout.php" class="logout-btn">Déconnexion</a>
+    
     <div class="container">
+        <?php echo $upload_message; ?>
+        
         <!-- Section de bienvenue -->
         <div class="welcome-section">
-            <div class="profile-avatar">
-                <?php echo strtoupper(substr($etudiant['prenom'], 0, 1) . substr($etudiant['nom'], 0, 1)); ?>
+            <div class="profile-avatar" onclick="document.getElementById('profile_photo').click()">
+                <?php if (!empty($etudiant['photo_profil']) && file_exists($etudiant['photo_profil'])): ?>
+                    <img src="<?php echo htmlspecialchars($etudiant['photo_profil']); ?>" alt="Photo de profil">
+                    <div class="avatar-overlay">Changer la photo</div>
+                <?php else: ?>
+                    <?php echo strtoupper(substr($etudiant['prenom'], 0, 1) . substr($etudiant['nom'], 0, 1)); ?>
+                    <div class="avatar-overlay">Ajouter une photo</div>
+                <?php endif; ?>
             </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="photo-upload-form">
+                <div class="file-input-wrapper">
+                    <input type="file" id="profile_photo" name="profile_photo" class="file-input" 
+                           accept="image/jpeg,image/jpg,image/png,image/gif" onchange="showFileName(this)">
+                    <label for="profile_photo" class="file-input-btn">Choisir une photo</label>
+                    <div id="file-name" class="file-name"></div>
+                </div>
+                <button type="submit" name="upload_photo" class="upload-btn">Mettre à jour</button>
+            </form>
+            
             <h1 class="welcome-title">Bienvenue, <?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?>!</h1>
             <p class="welcome-subtitle">Consultez vos informations personnelles et suivez vos cours</p>
         </div>
@@ -385,8 +586,12 @@ try {
                     <span class="info-label">Date de naissance</span>
                     <span class="info-value">
                         <?php 
-                        $date = new DateTime($etudiant['date_naissance']);
-                        echo $date->format('d/m/Y');
+                        if (!empty($etudiant['date_naissance'])) {
+                            $date = new DateTime($etudiant['date_naissance']);
+                            echo $date->format('d/m/Y');
+                        } else {
+                            echo 'Non renseignée';
+                        }
                         ?>
                     </span>
                 </div>
@@ -394,10 +599,14 @@ try {
                     <span class="info-label">Âge</span>
                     <span class="info-value">
                         <?php 
-                        $naissance = new DateTime($etudiant['date_naissance']);
-                        $aujourd_hui = new DateTime();
-                        $age = $aujourd_hui->diff($naissance)->y;
-                        echo $age . ' ans';
+                        if (!empty($etudiant['date_naissance'])) {
+                            $naissance = new DateTime($etudiant['date_naissance']);
+                            $aujourd_hui = new DateTime();
+                            $age = $aujourd_hui->diff($naissance)->y;
+                            echo $age . ' ans';
+                        } else {
+                            echo 'Non calculé';
+                        }
                         ?>
                     </span>
                 </div>
@@ -460,16 +669,27 @@ try {
                                     <span class="course-detail-value">
                                         <?php 
                                         $date = new DateTime($c['date']);
-                        echo $date->format('d/m/Y');
-                        ?>
-                    </span>
+                                        echo $date->format('d/m/Y');
+                                        ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-</div>
-</div>
+    </div>
+
+    <script>
+        function showFileName(input) {
+            const fileNameDiv = document.getElementById('file-name');
+            if (input.files && input.files[0]) {
+                fileNameDiv.textContent = 'Fichier sélectionné: ' + input.files[0].name;
+            } else {
+                fileNameDiv.textContent = '';
+            }
+        }
+    </script>
 </body>
 </html>
