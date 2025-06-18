@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes Cours - École</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+     <?php include 'header.php'; ?>
+   <style>
         :root {
             --primary: #6c5ce7;
             --secondary: #a29bfe;
