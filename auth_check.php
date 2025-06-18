@@ -1,6 +1,12 @@
 <?php
 require_once 'config.php';
 
+// Définition de la fonction redirect manquante
+function redirect($url) {
+    header('Location: ' . $url);
+    exit();
+}
+
 // Fonction pour vérifier si l'utilisateur est connecté
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && isset($_SESSION['user_type']);
@@ -19,6 +25,7 @@ function isEtudiant() {
 // Fonction pour rediriger vers la page de connexion si non authentifié
 function requireLogin() {
     if (!isLoggedIn()) {
+        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
         redirect('login.php');
     }
 }
@@ -52,4 +59,3 @@ function getCurrentUser() {
         'email' => $_SESSION['user_email']
     ];
 }
-?>

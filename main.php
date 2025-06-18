@@ -1,7 +1,7 @@
 <?php
 
 // Redirection si utilisateur non connecté
-require_once 'auth-check.php';
+require_once 'auth_check.php';
 requireLogin();
 
 
