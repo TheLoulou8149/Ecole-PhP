@@ -19,6 +19,7 @@ $coursCompletes = 0;
 try {
     // Connexion à la base de données
     require_once 'config.php';
+    $pdo = getDBConnection();
     
     // Compter les cours à venir (date de cours > aujourd'hui)
     $stmt = $pdo->prepare("
