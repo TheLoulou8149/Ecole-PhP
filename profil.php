@@ -1,5 +1,4 @@
 <?php
-<?php
 // Démarrer la session
 session_start();
 
@@ -16,6 +15,16 @@ if (function_exists('getDBConnection')) {
 } else {
     die("Erreur : La fonction getDBConnection() n'existe pas dans config.php");
 }
+
+// Vérifier si l'utilisateur est connecté
+if (!isset($_SESSION['id_etudiant'])) {
+    // Rediriger vers la page de connexion si pas connecté
+    header('Location: login.php');
+    exit();
+}
+
+// Récupérer l'ID de l'étudiant connecté
+$id_etudiant = $_SESSION['id_etudiant'];
 
 try {
     // Récupérer les informations de l'étudiant
