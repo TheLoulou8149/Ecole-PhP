@@ -11,7 +11,7 @@ $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
 try {
-    $host = 'localhost';
+    $host = '10.96.16.82';
 $db   = 'ecole';
 $user = 'colin';
 $pass = '';
