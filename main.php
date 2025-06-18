@@ -17,17 +17,16 @@ $coursAVenir = 0;
 $coursCompletes = 0;
 
 try {
-    // Connexion à la base de données (ajustez selon votre configuration)
-    require_once 'config/database.php'; // ou votre fichier de connexion DB
+    // Connexion à la base de données
+    require_once 'config.php';
     
     // Compter les cours à venir (date de cours > aujourd'hui)
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as count 
         FROM cours 
-        WHERE date_cours > CURDATE() 
-        AND (user_id = ? OR user_id IS NULL)
+        WHERE date > CURDATE()
     ");
-    $stmt->execute([$userId]);
+    $stmt->execute();
     $result = $stmt->fetch();
     $coursAVenir = $result['count'];
     
@@ -35,10 +34,9 @@ try {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as count 
         FROM cours 
-        WHERE date_cours < CURDATE() 
-        AND (user_id = ? OR user_id IS NULL)
+        WHERE date < CURDATE()
     ");
-    $stmt->execute([$userId]);
+    $stmt->execute();
     $result = $stmt->fetch();
     $coursCompletes = $result['count'];
     
