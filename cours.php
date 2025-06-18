@@ -11,10 +11,11 @@ $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
 try {
-define('DB_HOST', '10.96.16.82'); // l'adresse IP du serveur MySQL
-define('DB_NAME', 'ecole'); // le nom de la base de données
-define('DB_USER', 'colin'); // nom d'utilisateur 
-define('DB_PASS', '');
+    $host = '10.96.16.82';
+$db   = 'ecole';
+$user = 'colin';
+$pass = '';
+$charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
