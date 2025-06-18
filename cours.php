@@ -29,7 +29,7 @@ try {
     // Récupération des cours
     if ($user_type === 'etudiant') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere, p.nom AS prof, m.couleur
+                         m.intitule AS matiere, p.nom AS prof
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
                   INNER JOIN profs p ON c.id_prof = p.id_prof
@@ -37,7 +37,7 @@ try {
                   WHERE ce.id_etudiant = ?";
     } else if ($user_type === 'prof') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere, p.nom AS prof, m.couleur
+                         m.intitule AS matiere, p.nom AS prof
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
                   INNER JOIN profs p ON c.id_prof = p.id_prof
@@ -85,25 +85,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4361ee;
-            --primary-light: #4895ef;
-            --secondary: #3f37c9;
-            --accent: #f72585;
-            --success: #4cc9f0;
-            --warning: #f8961e;
-            --danger: #e63946;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray: #6c757d;
-            --border-radius: 12px;
-            --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-            --box-shadow-hover: 0 12px 30px rgba(0, 0, 0, 0.15);
-            --transition: all 0.3s ease;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -111,10 +93,10 @@ try {
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
             min-height: 100vh;
-            color: var(--dark);
+            color: #333;
             line-height: 1.6;
             padding: 20px;
         }
@@ -124,40 +106,37 @@ try {
             margin: 0 auto;
             display: grid;
             grid-template-columns: 280px 1fr;
-            gap: 25px;
+            gap: 20px;
         }
 
         /* Sidebar */
         .sidebar {
             background: white;
-            border-radius: var(--border-radius);
-            padding: 30px 20px;
-            box-shadow: var(--box-shadow);
+            border-radius: 8px;
+            padding: 20px 15px;
             height: fit-content;
         }
 
         .user-card {
             text-align: center;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
         }
 
         .user-name {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 5px;
-            color: var(--dark);
         }
 
         .user-role {
             display: inline-block;
-            background: var(--primary-light);
+            background: #4361ee;
             color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.8rem;
         }
 
         .sidebar-menu {
@@ -165,29 +144,28 @@ try {
         }
 
         .sidebar-menu li {
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
 
         .sidebar-menu a {
             display: flex;
             align-items: center;
-            padding: 12px 15px;
-            border-radius: 8px;
-            color: var(--gray);
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: #555;
             text-decoration: none;
             font-weight: 500;
-            transition: var(--transition);
         }
 
         .sidebar-menu a:hover, .sidebar-menu a.active {
-            background: rgba(67, 97, 238, 0.1);
-            color: var(--primary);
+            background: #f0f3ff;
+            color: #4361ee;
         }
 
         .sidebar-menu i {
-            margin-right: 10px;
-            font-size: 1.1rem;
-            width: 24px;
+            margin-right: 8px;
+            font-size: 1rem;
+            width: 20px;
             text-align: center;
         }
 
@@ -195,187 +173,146 @@ try {
         .main-content {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
         }
 
         .header {
             background: white;
-            border-radius: var(--border-radius);
-            padding: 25px 30px;
-            box-shadow: var(--box-shadow);
+            border-radius: 8px;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .header h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--dark);
+            font-size: 1.5rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-
-        .header h1 i {
-            color: var(--primary);
-            background: rgba(67, 97, 238, 0.1);
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            gap: 10px;
         }
 
         .date-display {
-            font-size: 1.1rem;
-            color: var(--gray);
-            font-weight: 500;
+            font-size: 1rem;
+            color: #666;
         }
 
         /* Stats */
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
         }
 
         .stat-card {
             background: white;
-            border-radius: var(--border-radius);
-            padding: 25px;
-            box-shadow: var(--box-shadow);
-            transition: var(--transition);
+            border-radius: 8px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow-hover);
         }
 
         .stat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             color: white;
         }
 
-        .icon-total { background: var(--primary); }
-        .icon-week { background: var(--success); }
-        .icon-today { background: var(--accent); }
-        .icon-month { background: var(--warning); }
+        .icon-total { background: #4361ee; }
+        .icon-week { background: #4cc9f0; }
+        .icon-today { background: #f72585; }
+        .icon-month { background: #f8961e; }
 
         .stat-title {
-            font-size: 1rem;
-            color: var(--gray);
-            font-weight: 500;
+            font-size: 0.9rem;
+            color: #666;
         }
 
         .stat-value {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            color: var(--dark);
             margin: 5px 0;
-        }
-
-        .stat-footer {
-            font-size: 0.9rem;
-            color: var(--gray);
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
         /* Content area */
         .content-area {
             background: white;
-            border-radius: var(--border-radius);
-            padding: 30px;
-            box-shadow: var(--box-shadow);
+            border-radius: 8px;
+            padding: 20px;
         }
 
         .content-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .content-header h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
+            font-size: 1.3rem;
+            font-weight: 600;
         }
 
         .view-toggle {
             display: flex;
             background: #f0f3ff;
-            border-radius: 10px;
-            padding: 5px;
+            border-radius: 8px;
+            padding: 4px;
         }
 
         .toggle-btn {
-            padding: 8px 20px;
+            padding: 6px 15px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: var(--transition);
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             background: transparent;
-            color: var(--gray);
+            color: #666;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .toggle-btn.active {
-            background: var(--primary);
+            background: #4361ee;
             color: white;
-            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
         }
 
         .search-container {
             position: relative;
-            width: 300px;
+            width: 250px;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 20px 12px 45px;
+            padding: 10px 15px 10px 35px;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
             background: #f0f3ff;
-            transition: var(--transition);
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .search-input:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            font-family: inherit;
         }
 
         .search-icon {
             position: absolute;
-            left: 15px;
+            left: 10px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--gray);
+            color: #666;
         }
 
         /* Calendar */
@@ -384,96 +321,77 @@ try {
             grid-template-columns: repeat(7, 1fr);
             gap: 1px;
             background: #f0f3ff;
-            border-radius: var(--border-radius);
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .calendar-header {
-            background: var(--primary);
+            background: #4361ee;
             color: white;
-            padding: 15px 10px;
+            padding: 12px 8px;
             text-align: center;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .calendar-day {
             background: white;
-            min-height: 140px;
-            padding: 15px 10px;
+            min-height: 120px;
+            padding: 12px 8px;
             position: relative;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-
-        .calendar-day:hover {
-            background: #f8f9ff;
         }
 
         .day-number {
             font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 10px;
-            font-size: 1.1rem;
+            margin-bottom: 8px;
+            font-size: 1rem;
         }
 
         .today .day-number {
             display: inline-block;
-            background: var(--primary);
+            background: #4361ee;
             color: white;
-            width: 30px;
-            height: 30px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             text-align: center;
-            line-height: 30px;
+            line-height: 26px;
         }
 
         .course-item {
             color: white;
-            padding: 6px 8px;
-            margin: 4px 0;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 5px 6px;
+            margin: 3px 0;
+            border-radius: 4px;
+            font-size: 0.7rem;
             font-weight: 500;
             cursor: pointer;
-            transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .course-item:hover {
-            transform: translateX(3px);
+            background: #4361ee;
         }
 
         /* List view */
         .list-view {
             display: none;
             grid-template-columns: 1fr;
-            gap: 20px;
+            gap: 15px;
         }
 
         .course-card {
             background: white;
-            border-radius: var(--border-radius);
-            padding: 25px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: var(--transition);
+            border-radius: 8px;
+            padding: 20px;
             position: relative;
             overflow: hidden;
-            border-left: 4px solid var(--primary);
+            border-left: 4px solid #4361ee;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-        }
-
-        .course-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow-hover);
+            gap: 12px;
         }
 
         .course-header {
@@ -483,41 +401,39 @@ try {
         }
 
         .course-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--dark);
-            line-height: 1.3;
+            font-size: 1.1rem;
+            font-weight: 600;
         }
 
         .course-subject {
-            background: var(--primary);
+            background: #4361ee;
             color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 0.8rem;
             font-weight: 500;
         }
 
         .course-meta {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 0.95rem;
-            color: var(--gray);
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
         }
 
         .meta-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             background: rgba(67, 97, 238, 0.1);
-            color: var(--primary);
+            color: #4361ee;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -525,69 +441,52 @@ try {
 
         .course-actions {
             display: flex;
-            gap: 12px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 8px;
         }
 
         .action-btn {
             flex: 1;
-            padding: 10px 20px;
+            padding: 8px 15px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
-            transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            font-family: 'Poppins', sans-serif;
+            gap: 6px;
+            font-family: inherit;
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: #4361ee;
             color: white;
         }
 
         .btn-outline {
             background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-        }
-
-        .btn-primary:hover {
-            background: var(--secondary);
-            transform: translateY(-2px);
-        }
-
-        .btn-outline:hover {
-            background: rgba(67, 97, 238, 0.1);
+            color: #4361ee;
+            border: 1px solid #4361ee;
         }
 
         /* Floating button */
         .floating-add {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: var(--accent);
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: #f72585;
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
-            box-shadow: 0 6px 20px rgba(247, 37, 133, 0.4);
-            transition: var(--transition);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .floating-add:hover {
-            transform: scale(1.1) rotate(90deg);
-            box-shadow: 0 8px 25px rgba(247, 37, 133, 0.5);
         }
 
         /* Responsive */
@@ -597,7 +496,7 @@ try {
             }
             
             .sidebar {
-                display: none; /* On cache la sidebar en version mobile */
+                display: none;
             }
         }
 
@@ -613,7 +512,6 @@ try {
             .search-container {
                 width: 100%;
             }
-        
         }
     </style>
 </head>
@@ -652,7 +550,6 @@ try {
                         <div class="stat-icon icon-total"><i class="fas fa-book"></i></div>
                     </div>
                     <div class="stat-value"><?php echo $totalCours; ?></div>
-                    <div class="stat-footer"><i class="fas fa-arrow-up"></i> 12% depuis le mois dernier</div>
                 </div>
                 
                 <div class="stat-card">
@@ -661,7 +558,6 @@ try {
                         <div class="stat-icon icon-week"><i class="fas fa-calendar-week"></i></div>
                     </div>
                     <div class="stat-value"><?php echo $coursThisWeek; ?></div>
-                    <div class="stat-footer"><i class="fas fa-check-circle"></i> <?php echo $coursThisWeek; ?> programmés</div>
                 </div>
                 
                 <div class="stat-card">
@@ -670,7 +566,6 @@ try {
                         <div class="stat-icon icon-today"><i class="fas fa-clock"></i></div>
                     </div>
                     <div class="stat-value"><?php echo $coursToday; ?></div>
-                    <div class="stat-footer"><i class="fas fa-bell"></i> Prochain cours à 10h30</div>
                 </div>
                 
                 <div class="stat-card">
@@ -679,14 +574,13 @@ try {
                         <div class="stat-icon icon-month"><i class="fas fa-calendar"></i></div>
                     </div>
                     <div class="stat-value"><?php echo $coursThisMonth; ?></div>
-                    <div class="stat-footer"><i class="fas fa-chart-line"></i> 25% d'augmentation</div>
                 </div>
             </div>
             
             <div class="content-area">
                 <div class="content-header">
                     <h2>Mes cours</h2>
-                    <div style="display: flex; gap: 20px;">
+                    <div style="display: flex; gap: 15px;">
                         <div class="view-toggle">
                             <button class="toggle-btn active" id="calendarBtn">
                                 <i class="fas fa-calendar-alt"></i> Calendrier
@@ -731,20 +625,6 @@ try {
         const today = new Date();
         const currentMonth = today.getMonth();
         const currentYear = today.getFullYear();
-        
-        // Couleurs pour les matières
-        const colors = {
-            'Mathématiques': '#4361ee',
-            'Physique': '#4895ef',
-            'Chimie': '#3f37c9',
-            'Informatique': '#4cc9f0',
-            'Littérature': '#f72585',
-            'Histoire': '#7209b7',
-            'Philosophie': '#560bad',
-            'Économie': '#b5179e',
-            'Biologie': '#2ec4b6',
-            'Droit': '#ff9f1c'
-        };
 
         function initializeCalendar() {
             const calendarView = document.getElementById('calendarView');
@@ -786,7 +666,6 @@ try {
                 coursThisDay.forEach(cours => {
                     const courseDiv = document.createElement('div');
                     courseDiv.className = 'course-item';
-                    courseDiv.style.backgroundColor = colors[cours.matiere] || '#4361ee';
                     courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 15)}`;
                     courseDiv.title = `${cours.intitule} - ${cours.prof}`;
                     courseDiv.onclick = () => showCourseDetails(cours.id_cours);
@@ -804,7 +683,6 @@ try {
             coursData.forEach((cours, index) => {
                 const courseCard = document.createElement('div');
                 courseCard.className = `course-card`;
-                courseCard.style.borderLeftColor = colors[cours.matiere] || '#4361ee';
                 
                 courseCard.innerHTML = `
                     <div class="course-header">
@@ -856,7 +734,7 @@ try {
         }
         
         function getRandomTime() {
-            const hours = Math.floor(Math.random() * 4) + 9; // 9h à 12h
+            const hours = Math.floor(Math.random() * 4) + 9;
             const minutes = Math.random() > 0.5 ? '00' : '30';
             return `${hours}:${minutes}`;
         }
