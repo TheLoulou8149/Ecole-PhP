@@ -26,7 +26,7 @@ function isEtudiant() {
 function requireLogin() {
     if (!isLoggedIn()) {
         $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-        redirect('login.php');
+        redirect('main.php');
     }
 }
 
