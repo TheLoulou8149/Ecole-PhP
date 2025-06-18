@@ -1,29 +1,109 @@
+<?php
+session_start();
+require_once 'config.php';
+
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'];
+
+try {
+    $pdo = getDBConnection();
+    
+    // Récupération des informations utilisateur
+    if ($user_type === 'etudiant') {
+        $stmt = $pdo->prepare("SELECT nom, prenom, photo FROM etudiants WHERE id_etudiant = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user_name = $user_info['prenom'] . ' ' . $user_info['nom'];
+        $user_photo = $user_info['photo'] ?: 'default-avatar.jpg';
+    } else if ($user_type === 'prof') {
+        $stmt = $pdo->prepare("SELECT nom, photo FROM profs WHERE id_prof = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user_name = 'Prof. ' . $user_info['nom'];
+        $user_photo = $user_info['photo'] ?: 'default-avatar.jpg';
+    }
+
+    // Récupération des cours
+    if ($user_type === 'etudiant') {
+        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                         m.intitule AS matiere, p.nom AS prof, m.couleur
+                  FROM cours c
+                  INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+                  INNER JOIN profs p ON c.id_prof = p.id_prof
+                  INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+                  WHERE ce.id_etudiant = ?";
+    } else if ($user_type === 'prof') {
+        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                         m.intitule AS matiere, p.nom AS prof, m.couleur
+                  FROM cours c
+                  INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+                  INNER JOIN profs p ON c.id_prof = p.id_prof
+                  WHERE c.id_prof = ?";
+    }
+
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$user_id]);
+    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calcul des statistiques
+    $totalCours = count($cours);
+    $today = date('Y-m-d');
+    $coursToday = 0;
+    $coursThisWeek = 0;
+    $coursThisMonth = 0;
+
+    // Dates pour la semaine en cours
+    $startOfWeek = date('Y-m-d', strtotime('monday this week'));
+    $endOfWeek = date('Y-m-d', strtotime('sunday this week'));
+    $startOfMonth = date('Y-m-01');
+    $endOfMonth = date('Y-m-t');
+
+    foreach ($cours as $c) {
+        if ($c['date'] == $today) {
+            $coursToday++;
+        }
+        if ($c['date'] >= $startOfWeek && $c['date'] <= $endOfWeek) {
+            $coursThisWeek++;
+        }
+        if ($c['date'] >= $startOfMonth && $c['date'] <= $endOfMonth) {
+            $coursThisMonth++;
+        }
+    }
+
+} catch (PDOException $e) {
+    die("Erreur de base de données : " . $e->getMessage());
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mes Cours - École</title>
+    <title>Tableau de bord - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-     <?php include 'header.php'; ?>
-   <style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --accent-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-            --success-color: #00b894;
-            --warning-color: #fdcb6e;
-            --danger-color: #ff7675;
-            --text-primary: #2d3436;
-            --text-secondary: #636e72;
-            --background-light: #f8f9fa;
-            --white: #ffffff;
-            --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.12);
-            --shadow-heavy: 0 15px 50px rgba(0, 0, 0, 0.15);
-            --border-radius: 16px;
-            --border-radius-large: 24px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --secondary: #3f37c9;
+            --accent: #f72585;
+            --success: #4cc9f0;
+            --warning: #f8961e;
+            --danger: #e63946;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --border-radius: 12px;
+            --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            --box-shadow-hover: 0 12px 30px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s ease;
         }
 
         * {
@@ -33,203 +113,273 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
             min-height: 100vh;
+            color: var(--dark);
             line-height: 1.6;
-            color: var(--text-primary);
+            padding: 20px;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 25px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px 20px;
+            box-shadow: var(--box-shadow);
+            height: fit-content;
+        }
+
+        .user-card {
+            text-align: center;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            border: 3px solid var(--primary-light);
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        .user-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .user-role {
+            display: inline-block;
+            background: var(--primary-light);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 8px;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: var(--gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+
+        .sidebar-menu i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--secondary-gradient);
-        }
-
-        .header h1 {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            letter-spacing: -0.5px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            flex-wrap: wrap;
-        }
-
-        .user-badge {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .main-content {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(10px);
-            padding: 30px;
+            background: white;
             border-radius: var(--border-radius);
-            text-align: center;
-            box-shadow: var(--shadow-light);
-            transition: var(--transition);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--primary-gradient);
-            transform: scaleX(0);
-            transition: var(--transition);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-heavy);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            opacity: 0.8;
-        }
-
-        .stat-number {
-            font-size: 2.8rem;
-            font-weight: 800;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            line-height: 1;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-
-        .controls {
+            padding: 25px 30px;
+            box-shadow: var(--box-shadow);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .date-display {
+            font-size: 1.1rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
-            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .icon-total { background: var(--primary); }
+        .icon-week { background: var(--success); }
+        .icon-today { background: var(--accent); }
+        .icon-month { background: var(--warning); }
+
+        .stat-title {
+            font-size: 1rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 5px 0;
+        }
+
+        .stat-footer {
+            font-size: 0.9rem;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Content area */
+        .content-area {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .content-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
         }
 
         .view-toggle {
             display: flex;
-            background: var(--background-light);
-            border-radius: 12px;
-            padding: 4px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: #f0f3ff;
+            border-radius: 10px;
+            padding: 5px;
         }
 
         .toggle-btn {
-            padding: 12px 24px;
+            padding: 8px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             transition: var(--transition);
-            font-weight: 600;
-            font-size: 0.95rem;
+            font-weight: 500;
+            font-size: 0.9rem;
             background: transparent;
-            color: var(--text-secondary);
+            color: var(--gray);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .toggle-btn.active {
-            background: var(--primary-gradient);
+            background: var(--primary);
             color: white;
-            box-shadow: var(--shadow-light);
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
         }
 
         .search-container {
             position: relative;
-            max-width: 300px;
+            width: 300px;
         }
 
         .search-input {
             width: 100%;
             padding: 12px 20px 12px 45px;
-            border: 2px solid transparent;
-            border-radius: 12px;
+            border: none;
+            border-radius: 10px;
             font-size: 1rem;
-            background: var(--background-light);
+            background: #f0f3ff;
             transition: var(--transition);
+            font-family: 'Poppins', sans-serif;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
         }
 
         .search-icon {
@@ -237,28 +387,27 @@
             left: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-secondary);
+            color: var(--gray);
         }
 
+        /* Calendar */
         .calendar-view {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
-            background: var(--background-light);
+            gap: 1px;
+            background: #f0f3ff;
             border-radius: var(--border-radius);
             overflow: hidden;
-            box-shadow: var(--shadow-light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .calendar-header {
-            background: var(--primary-gradient);
+            background: var(--primary);
             color: white;
-            padding: 20px 10px;
+            padding: 15px 10px;
             text-align: center;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .calendar-day {
@@ -267,377 +416,353 @@
             padding: 15px 10px;
             position: relative;
             transition: var(--transition);
-            border-radius: 4px;
             cursor: pointer;
         }
 
         .calendar-day:hover {
-            background: #f8f9fa;
-            transform: scale(1.02);
-            box-shadow: var(--shadow-light);
+            background: #f8f9ff;
         }
 
         .day-number {
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--dark);
             margin-bottom: 10px;
             font-size: 1.1rem;
         }
 
-        .course-item {
-            background: var(--primary-gradient);
+        .today .day-number {
+            display: inline-block;
+            background: var(--primary);
             color: white;
-            padding: 8px;
-            margin: 3px 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+        }
+
+        .course-item {
+            color: white;
+            padding: 6px 8px;
+            margin: 4px 0;
             border-radius: 6px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
             transition: var(--transition);
             display: flex;
             align-items: center;
             gap: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .course-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transform: translateX(3px);
         }
 
+        /* List view */
         .list-view {
             display: none;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 25px;
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
         .course-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(10px);
+            background: white;
             border-radius: var(--border-radius);
-            padding: 30px;
-            box-shadow: var(--shadow-light);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transition: var(--transition);
             position: relative;
             overflow: hidden;
-        }
-
-        .course-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--primary-gradient);
+            border-left: 4px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
         .course-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-heavy);
+            transform: translateY(-5px);
+            box-shadow: var(--box-shadow-hover);
         }
 
         .course-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 20px;
         }
 
         .course-title {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--dark);
             line-height: 1.3;
         }
 
         .course-subject {
-            background: var(--primary-gradient);
+            background: var(--primary);
             color: white;
-            padding: 6px 12px;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
         .course-meta {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
-            margin-bottom: 20px;
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+            gap: 10px;
+            font-size: 0.95rem;
+            color: var(--gray);
         }
 
         .meta-icon {
-            color: #667eea;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .course-actions {
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            margin-top: 10px;
         }
 
         .action-btn {
             flex: 1;
-            padding: 12px 20px;
+            padding: 10px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 500;
             transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            font-family: 'Poppins', sans-serif;
         }
 
         .btn-primary {
-            background: var(--primary-gradient);
+            background: var(--primary);
             color: white;
         }
 
-        .btn-secondary {
-            background: var(--background-light);
-            color: var(--text-primary);
-            border: 2px solid #e9ecef;
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
         }
 
         .btn-primary:hover {
+            background: var(--secondary);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
 
-        .btn-secondary:hover {
-            background: #e9ecef;
+        .btn-outline:hover {
+            background: rgba(67, 97, 238, 0.1);
         }
 
-        @media (max-width: 1024px) {
-            .list-view {
-                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            .header, .main-content {
-                padding: 25px;
-            }
-
-            .calendar-view {
-                grid-template-columns: 1fr;
-            }
-
-            .calendar-day {
-                min-height: auto;
-                padding: 20px;
-            }
-
-            .list-view {
-                grid-template-columns: 1fr;
-            }
-
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .view-toggle {
-                justify-content: center;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-        }
-
+        /* Floating button */
         .floating-add {
             position: fixed;
             bottom: 30px;
             right: 30px;
             width: 60px;
             height: 60px;
-            background: var(--accent-gradient);
+            background: var(--accent);
             border: none;
             border-radius: 50%;
             color: white;
             font-size: 1.5rem;
             cursor: pointer;
-            box-shadow: var(--shadow-medium);
+            box-shadow: 0 6px 20px rgba(247, 37, 133, 0.4);
             transition: var(--transition);
             z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .floating-add:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-heavy);
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(247, 37, 133, 0.5);
         }
 
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            .sidebar {
+                display: none; /* On cache la sidebar en version mobile */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .calendar-view {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-container {
+                width: 100%;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-graduation-cap"></i> Mes Cours</h1>
-            <div class="user-info">
-                <span><i class="fas fa-user"></i> Utilisateur connecté</span>
-                <span class="user-badge"><i class="fas fa-student"></i> Étudiant</span>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="user-card">
+                <img src="<?php echo $user_photo; ?>" alt="Avatar" class="avatar">
+                <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
+                <div class="user-role"><?php echo ucfirst($user_type); ?></div>
             </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active"><i class="fas fa-home"></i> Tableau de bord</a></li>
+                <li><a href="#"><i class="fas fa-calendar-alt"></i> Calendrier</a></li>
+                <li><a href="#"><i class="fas fa-book"></i> Mes cours</a></li>
+                <li><a href="#"><i class="fas fa-graduation-cap"></i> Diplômes</a></li>
+                <li><a href="#"><i class="fas fa-users"></i> Étudiants</a></li>
+                <li><a href="#"><i class="fas fa-chalkboard-teacher"></i> Professeurs</a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> Paramètres</a></li>
+                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
+            </ul>
         </div>
-
+        
+        <!-- Main Content -->
         <div class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-graduation-cap"></i> Tableau de bord</h1>
+                <div class="date-display"><?php echo date('l j F Y'); ?></div>
+            </div>
+            
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-book"></i></div>
-                    <div class="stat-number" id="totalCours">12</div>
-                    <div class="stat-label">Cours au total</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
-                    <div class="stat-number" id="coursSemaine">8</div>
-                    <div class="stat-label">Cette semaine</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-number" id="coursAujourdhui">3</div>
-                    <div class="stat-label">Aujourd'hui</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-number" id="coursCompletes">5</div>
-                    <div class="stat-label">Complétés</div>
-                </div>
-            </div>
-
-            <div class="controls">
-                <div class="view-toggle">
-                    <button class="toggle-btn active" onclick="showCalendar()">
-                        <i class="fas fa-calendar-alt"></i> Calendrier
-                    </button>
-                    <button class="toggle-btn" onclick="showList()">
-                        <i class="fas fa-list"></i> Liste
-                    </button>
+                    <div class="stat-header">
+                        <div class="stat-title">Cours au total</div>
+                        <div class="stat-icon icon-total"><i class="fas fa-book"></i></div>
+                    </div>
+                    <div class="stat-value"><?php echo $totalCours; ?></div>
+                    <div class="stat-footer"><i class="fas fa-arrow-up"></i> 12% depuis le mois dernier</div>
                 </div>
                 
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Rechercher un cours..." id="searchInput">
-                    <i class="fas fa-search search-icon"></i>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Cette semaine</div>
+                        <div class="stat-icon icon-week"><i class="fas fa-calendar-week"></i></div>
+                    </div>
+                    <div class="stat-value"><?php echo $coursThisWeek; ?></div>
+                    <div class="stat-footer"><i class="fas fa-check-circle"></i> <?php echo $coursThisWeek; ?> programmés</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Aujourd'hui</div>
+                        <div class="stat-icon icon-today"><i class="fas fa-clock"></i></div>
+                    </div>
+                    <div class="stat-value"><?php echo $coursToday; ?></div>
+                    <div class="stat-footer"><i class="fas fa-bell"></i> Prochain cours à 10h30</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Ce mois</div>
+                        <div class="stat-icon icon-month"><i class="fas fa-calendar"></i></div>
+                    </div>
+                    <div class="stat-value"><?php echo $coursThisMonth; ?></div>
+                    <div class="stat-footer"><i class="fas fa-chart-line"></i> 25% d'augmentation</div>
                 </div>
             </div>
-
-            <div id="calendarView" class="calendar-view">
-                <div class="calendar-header">Lun</div>
-                <div class="calendar-header">Mar</div>
-                <div class="calendar-header">Mer</div>
-                <div class="calendar-header">Jeu</div>
-                <div class="calendar-header">Ven</div>
-                <div class="calendar-header">Sam</div>
-                <div class="calendar-header">Dim</div>
-            </div>
-
-            <div id="listView" class="list-view">
-                <!-- Les cours seront chargés ici dynamiquement -->
+            
+            <div class="content-area">
+                <div class="content-header">
+                    <h2>Mes cours</h2>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" id="calendarBtn">
+                                <i class="fas fa-calendar-alt"></i> Calendrier
+                            </button>
+                            <button class="toggle-btn" id="listBtn">
+                                <i class="fas fa-list"></i> Liste
+                            </button>
+                        </div>
+                        
+                        <div class="search-container">
+                            <input type="text" class="search-input" placeholder="Rechercher un cours..." id="searchInput">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="calendarView" class="calendar-view">
+                    <div class="calendar-header">Lundi</div>
+                    <div class="calendar-header">Mardi</div>
+                    <div class="calendar-header">Mercredi</div>
+                    <div class="calendar-header">Jeudi</div>
+                    <div class="calendar-header">Vendredi</div>
+                    <div class="calendar-header">Samedi</div>
+                    <div class="calendar-header">Dimanche</div>
+                    <!-- Les jours seront ajoutés dynamiquement par JavaScript -->
+                </div>
+                
+                <div id="listView" class="list-view">
+                    <!-- Les cours seront chargés ici dynamiquement -->
+                </div>
             </div>
         </div>
     </div>
-
+    
     <button class="floating-add" onclick="addNewCourse()">
         <i class="fas fa-plus"></i>
     </button>
-
+    
     <script>
-        // Données des cours enrichies
-        const coursData = [
-            {
-                id: 1,
-                intitule: "Algèbre linéaire avancée",
-                date: "2024-03-10",
-                plateforme: "Moodle",
-                matiere: "Mathématiques",
-                prof: "Prof. Durand",
-                duree: "2h30",
-                salle: "A301",
-                description: "Étude des espaces vectoriels et transformations linéaires"
-            },
-            {
-                id: 2,
-                intitule: "Analyse mathématique",
-                date: "2024-04-15",
-                plateforme: "Google Classroom",
-                matiere: "Mathématiques",
-                prof: "Prof. Martin",
-                duree: "2h",
-                salle: "B205",
-                description: "Limites, dérivées et intégrales"
-            },
-            {
-                id: 3,
-                intitule: "Mécanique classique",
-                date: "2024-05-20",
-                plateforme: "Google Classroom",
-                matiere: "Physique",
-                prof: "Prof. Dubois",
-                duree: "3h",
-                salle: "Lab 1",
-                description: "Cinématique et dynamique des systèmes"
-            },
-            {
-                id: 4,
-                intitule: "Physique quantique",
-                date: "2024-06-25",
-                plateforme: "EdX",
-                matiere: "Physique",
-                prof: "Prof. Leroy",
-                duree: "2h15",
-                salle: "C102",
-                description: "Introduction aux principes quantiques"
-            },
-            {
-                id: 5,
-                intitule: "Chimie organique",
-                date: "2024-07-12",
-                plateforme: "Khan Academy",
-                matiere: "Chimie",
-                prof: "Prof. Leroy",
-                duree: "2h45",
-                salle: "Lab 2",
-                description: "Réactions et mécanismes organiques"
-            },
-            {
-                id: 6,
-                intitule: "Programmation Python",
-                date: "2024-08-05",
-                plateforme: "Udemy",
-                matiere: "Informatique",
-                prof: "Prof. Morel",
-                duree: "4h",
-                salle: "Info 1",
-                description: "Développement d'applications Python"
-            }
-        ];
+        // Données des cours
+        const coursData = <?php echo json_encode($cours); ?>;
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        
+        // Couleurs pour les matières
+        const colors = {
+            'Mathématiques': '#4361ee',
+            'Physique': '#4895ef',
+            'Chimie': '#3f37c9',
+            'Informatique': '#4cc9f0',
+            'Littérature': '#f72585',
+            'Histoire': '#7209b7',
+            'Philosophie': '#560bad',
+            'Économie': '#b5179e',
+            'Biologie': '#2ec4b6',
+            'Droit': '#ff9f1c'
+        };
 
         function initializeCalendar() {
             const calendarView = document.getElementById('calendarView');
@@ -646,15 +771,12 @@
             calendarView.innerHTML = '';
             headers.forEach(header => calendarView.appendChild(header));
 
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
-            
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
             
             // Ajouter les jours vides du début
-            for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+            const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+            for (let i = 0; i < startOffset; i++) {
                 const emptyDay = document.createElement('div');
                 emptyDay.className = 'calendar-day';
                 calendarView.appendChild(emptyDay);
@@ -663,7 +785,12 @@
             // Ajouter les jours du mois
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day fade-in';
+                dayDiv.className = 'calendar-day';
+                
+                // Marquer aujourd'hui
+                if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
+                    dayDiv.classList.add('today');
+                }
                 
                 const dayNumber = document.createElement('div');
                 dayNumber.className = 'day-number';
@@ -677,16 +804,12 @@
                 coursThisDay.forEach(cours => {
                     const courseDiv = document.createElement('div');
                     courseDiv.className = 'course-item';
-                    courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 12)}...`;
+                    courseDiv.style.backgroundColor = colors[cours.matiere] || '#4361ee';
+                    courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 15)}`;
                     courseDiv.title = `${cours.intitule} - ${cours.prof}`;
+                    courseDiv.onclick = () => showCourseDetails(cours.id_cours);
                     dayDiv.appendChild(courseDiv);
                 });
-                
-                // Marquer aujourd'hui
-                if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    dayDiv.style.background = 'linear-gradient(135deg, #667eea22, #764ba222)';
-                    dayDiv.style.border = '2px solid #667eea';
-                }
                 
                 calendarView.appendChild(dayDiv);
             }
@@ -698,8 +821,8 @@
             
             coursData.forEach((cours, index) => {
                 const courseCard = document.createElement('div');
-                courseCard.className = `course-card fade-in`;
-                courseCard.style.animationDelay = `${index * 0.1}s`;
+                courseCard.className = `course-card`;
+                courseCard.style.borderLeftColor = colors[cours.matiere] || '#4361ee';
                 
                 courseCard.innerHTML = `
                     <div class="course-header">
@@ -709,36 +832,28 @@
                     
                     <div class="course-meta">
                         <div class="meta-item">
-                            <i class="fas fa-calendar meta-icon"></i>
-                            ${formatDate(cours.date)}
+                            <div class="meta-icon"><i class="fas fa-calendar"></i></div>
+                            <div>${formatDate(cours.date)}</div>
                         </div>
                         <div class="meta-item">
-                            <i class="fas fa-clock meta-icon"></i>
-                            ${cours.duree}
+                            <div class="meta-icon"><i class="fas fa-user-tie"></i></div>
+                            <div>${cours.prof}</div>
                         </div>
                         <div class="meta-item">
-                            <i class="fas fa-map-marker-alt meta-icon"></i>
-                            ${cours.salle}
+                            <div class="meta-icon"><i class="fas fa-laptop"></i></div>
+                            <div>${cours.plateforme}</div>
                         </div>
                         <div class="meta-item">
-                            <i class="fas fa-user-tie meta-icon"></i>
-                            ${cours.prof}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-laptop meta-icon"></i>
-                            ${cours.plateforme}
+                            <div class="meta-icon"><i class="fas fa-clock"></i></div>
+                            <div>${getRandomTime()}</div>
                         </div>
                     </div>
                     
-                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-style: italic;">
-                        ${cours.description}
-                    </p>
-                    
                     <div class="course-actions">
-                        <button class="action-btn btn-primary">
+                        <button class="action-btn btn-primary" onclick="accessCourse(${cours.id_cours})">
                             <i class="fas fa-play"></i> Accéder
                         </button>
-                        <button class="action-btn btn-secondary">
+                        <button class="action-btn btn-outline" onclick="showCourseDetails(${cours.id_cours})">
                             <i class="fas fa-info-circle"></i> Détails
                         </button>
                     </div>
@@ -751,60 +866,57 @@
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('fr-FR', {
-                weekday: 'short',
+                weekday: 'long',
                 day: 'numeric',
-                month: 'short'
+                month: 'long',
+                year: 'numeric'
             });
+        }
+        
+        function getRandomTime() {
+            const hours = Math.floor(Math.random() * 4) + 9; // 9h à 12h
+            const minutes = Math.random() > 0.5 ? '00' : '30';
+            return `${hours}:${minutes}`;
         }
 
         function showCalendar() {
             document.getElementById('calendarView').style.display = 'grid';
             document.getElementById('listView').style.display = 'none';
-            document.querySelectorAll('.toggle-btn')[0].classList.add('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.remove('active');
+            document.getElementById('calendarBtn').classList.add('active');
+            document.getElementById('listBtn').classList.remove('active');
         }
 
         function showList() {
             document.getElementById('calendarView').style.display = 'none';
             document.getElementById('listView').style.display = 'grid';
-            document.querySelectorAll('.toggle-btn')[0].classList.remove('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.add('active');
+            document.getElementById('calendarBtn').classList.remove('active');
+            document.getElementById('listBtn').classList.add('active');
         }
 
         function addNewCourse() {
             alert('Fonctionnalité d\'ajout de cours à implémenter');
         }
-
-        // Recherche en temps réel
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const courseCards = document.querySelectorAll('.course-card');
-            
-            courseCards.forEach(card => {
-                const title = card.querySelector('.course-title').textContent.toLowerCase();
-                const subject = card.querySelector('.course-subject').textContent.toLowerCase();
-                
-                if (title.includes(searchTerm) || subject.includes(searchTerm)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
+        
+        function accessCourse(courseId) {
+            alert(`Accès au cours ID: ${courseId} - Cette fonctionnalité est en cours de développement`);
+        }
+        
+        function showCourseDetails(courseId) {
+            const course = coursData.find(c => c.id_cours == courseId);
+            if (course) {
+                alert(`Détails du cours:\n\nTitre: ${course.intitule}\nMatière: ${course.matiere}\nDate: ${formatDate(course.date)}\nProfesseur: ${course.prof}\nPlateforme: ${course.plateforme}`);
+            }
+        }
 
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             initializeCalendar();
             loadCoursList();
             
-            // Animation d'entrée pour les stats
-            const statCards = document.querySelectorAll('.stat-card');
-            statCards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.2}s`;
-                card.classList.add('fade-in');
-            });
+            // Écouteurs d'événements pour les boutons
+            document.getElementById('calendarBtn').addEventListener('click', showCalendar);
+            document.getElementById('listBtn').addEventListener('click', showList);
         });
     </script>
-    <?php include 'footer.php'; ?>
 </body>
 </html>

@@ -4,15 +4,47 @@
 //require_once 'auth_check.php';
 //requireLogin();
 
-
 // Démarrage de session et inclusion du header
 require_once 'header.php';
-
-
 
 // Récupération des informations de l'utilisateur connecté
 $welcomeName = htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur');
 $userType = $_SESSION['user_type'] ?? 'étudiant';
+$userId = $_SESSION['user_id'] ?? 0;
+
+// Récupération des statistiques réelles depuis la base de données
+$coursAVenir = 0;
+$coursCompletes = 0;
+
+try {
+    // Connexion à la base de données
+    require_once 'config.php';
+    $pdo = getDBConnection();
+    
+    // Compter les cours à venir (date de cours > aujourd'hui)
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as count 
+        FROM cours 
+        WHERE date > CURDATE()
+    ");
+    $stmt->execute();
+    $result = $stmt->fetch();
+    $coursAVenir = $result['count'];
+    
+    // Compter les cours complétés (date de cours < aujourd'hui)
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as count 
+        FROM cours 
+        WHERE date < CURDATE()
+    ");
+    $stmt->execute();
+    $result = $stmt->fetch();
+    $coursCompletes = $result['count'];
+    
+} catch (PDOException $e) {
+    // En cas d'erreur, garder les valeurs par défaut (0)
+    error_log("Erreur base de données: " . $e->getMessage());
+}
 ?>
 
 <main>
@@ -48,16 +80,12 @@ $userType = $_SESSION['user_type'] ?? 'étudiant';
         <!-- Statistiques -->
         <div class="stats-section">
             <div class="stat-card">
-                <div class="stat-number">5</div>
-                <div class="stat-label">Cours aujourd'hui</div>
+                <div class="stat-number"><?php echo $coursAVenir; ?></div>
+                <div class="stat-label">Cours à venir</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">12</div>
-                <div class="stat-label">Nouveaux messages</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">3</div>
-                <div class="stat-label">Devoirs à rendre</div>
+                <div class="stat-number"><?php echo $coursCompletes; ?></div>
+                <div class="stat-label">Cours complétés</div>
             </div>
         </div>
     </div>
@@ -156,29 +184,35 @@ $userType = $_SESSION['user_type'] ?? 'étudiant';
     /* Statistiques */
     .stats-section {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 1.2rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
         margin-bottom: 3rem;
+        justify-items: center;
     }
 
     .stat-card {
         background: rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(10px);
         border-radius: 12px;
-        padding: 1.5rem;
+        padding: 2rem 1.5rem;
         text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 180px;
+        width: 100%;
+        max-width: 250px;
     }
 
     .stat-number {
-        font-size: 2.2rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.5rem;
+        color: #64B5F6;
     }
 
     .stat-label {
         opacity: 0.85;
-        font-size: 0.9rem;
+        font-size: 1rem;
+        font-weight: 500;
     }
 
     /* Responsive */
