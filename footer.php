@@ -293,8 +293,8 @@
                     <a href="cours.php" class="footer-nav-link">Mes Cours</a>
                     <a href="matiere.php" class="footer-nav-link">Par Matière</a>
                     <a href="profil.php" class="footer-nav-link">Mon Profil</a>
-                    <a href="aide.php" class="footer-nav-link">Centre d'aide</a>
-                    <a href="contact.php" class="footer-nav-link">Contact</a>
+                    <a href="" class="footer-nav-link">Centre d'aide</a>
+                    <a href="" class="footer-nav-link">Contact</a>
                 </div>
 
                 <!-- Contact et réseaux sociaux -->
