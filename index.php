@@ -161,37 +161,6 @@
             font-size: 1.3rem;
         }
 
-        /* Footer */
-        footer {
-            background: rgba(0, 0, 0, 0.2);
-            color: white;
-            text-align: center;
-            padding: 2rem 0;
-            margin-top: auto;
-        }
-
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .footer-links a {
-            color: white;
-            text-decoration: none;
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            opacity: 1;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .header-content {
@@ -210,16 +179,6 @@
             .main-buttons {
                 flex-direction: column;
                 align-items: center;
-            }
-
-            .footer-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .footer-links {
-                flex-wrap: wrap;
-                justify-content: center;
             }
         }
     </style>
@@ -273,20 +232,7 @@
     </main>
 
     <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-links">
-                    <a href="#about">À propos</a>
-                    <a href="#contact">Contact</a>
-                    <a href="#help">Aide</a>
-                    <a href="#privacy">Confidentialité</a>
-                </div>
-                <div>
-                    <p>&copy; <?php echo date('Y'); ?> EduConnect. Tous droits réservés.</p>
-                </div>
-            </div>
-        </div>
-    </footer>
+        <?php require_once 'footer.php'; ?>
+
 </body>
 </html>
