@@ -1,18 +1,14 @@
 <?php
 
-// Redirection si utilisateur non connecté
-//require_once 'auth_check.php';
-//requireLogin();
-
 // Démarrage de session et inclusion du header
 require_once 'header.php';
 
 // Récupération des informations de l'utilisateur connecté
 $welcomeName = htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur');
 $userType = $_SESSION['user_type'] ?? 'étudiant';
-$userId = $_SESSION['user_id'] ?? 0;
+$userId = $_SESSION['user_id'] ?? 0; // Doit être l'id_etudiant
 
-// Récupération des statistiques réelles depuis la base de données
+// Initialisation des compteurs
 $coursAVenir = 0;
 $coursCompletes = 0;
 
@@ -20,31 +16,33 @@ try {
     // Connexion à la base de données
     require_once 'config.php';
     $pdo = getDBConnection();
-    
-    // Compter les cours à venir (date de cours > aujourd'hui)
+
+    // Cours à venir pour l'étudiant connecté
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count 
-        FROM cours 
-        WHERE date > CURDATE()
+        SELECT COUNT(*) as count
+        FROM cours c
+        INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+        WHERE ce.id_etudiant = :id_etudiant AND c.date > CURDATE()
     ");
-    $stmt->execute();
+    $stmt->execute(['id_etudiant' => $userId]);
     $result = $stmt->fetch();
     $coursAVenir = $result['count'];
-    
-    // Compter les cours complétés (date de cours < aujourd'hui)
+
+    // Cours complétés pour l'étudiant connecté
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count 
-        FROM cours 
-        WHERE date < CURDATE()
+        SELECT COUNT(*) as count
+        FROM cours c
+        INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+        WHERE ce.id_etudiant = :id_etudiant AND c.date < CURDATE()
     ");
-    $stmt->execute();
+    $stmt->execute(['id_etudiant' => $userId]);
     $result = $stmt->fetch();
     $coursCompletes = $result['count'];
-    
+
 } catch (PDOException $e) {
-    // En cas d'erreur, garder les valeurs par défaut (0)
     error_log("Erreur base de données: " . $e->getMessage());
 }
+
 ?>
 
 <main>
@@ -92,7 +90,7 @@ try {
 </main>
 
 <style>
-    /* Styles pour la section principale */
+    /* Styles CSS (inchangés) */
     main {
         padding: 2rem 0;
         color: white;
@@ -104,7 +102,6 @@ try {
         padding: 0 20px;
     }
 
-    /* Section de bienvenue */
     .welcome-section {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
@@ -134,7 +131,6 @@ try {
         line-height: 1.6;
     }
 
-    /* Cartes d'action */
     .quick-actions {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -181,7 +177,6 @@ try {
         font-size: 0.95rem;
     }
 
-    /* Statistiques */
     .stats-section {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -215,20 +210,19 @@ try {
         font-weight: 500;
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
         .welcome-section {
             padding: 1.8rem;
         }
-        
+
         .welcome-title {
             font-size: 1.8rem;
         }
-        
+
         .quick-actions {
             grid-template-columns: 1fr;
         }
-        
+
         .stats-section {
             grid-template-columns: repeat(2, 1fr);
         }
