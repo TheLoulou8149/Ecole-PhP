@@ -9,22 +9,11 @@ if (!file_exists('config.php')) {
 
 require_once 'config.php'; // Inclure le fichier de configuration
 
-// Si $pdo n'existe pas, essayer d'utiliser les variables de config.php
-if (!isset($pdo)) {
-    try {
-        // Essayer d'utiliser les variables définies dans config.php
-        if (isset($host, $dbname, $user, $pass)) {
-            $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } elseif (isset($servername, $database, $username, $password)) {
-            $pdo = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } else {
-            die("Erreur : Variables de connexion non trouvées dans config.php");
-        }
-    } catch(PDOException $e) {
-        die("Erreur de connexion : " . $e->getMessage());
-    }
+// Créer la connexion en utilisant la fonction getDBConnection()
+if (function_exists('getDBConnection')) {
+    $pdo = getDBConnection();
+} else {
+    die("Erreur : La fonction getDBConnection() n'existe pas dans config.php");
 }
 
 // Debug : Afficher tous les étudiants pour trouver Jean Dupont
