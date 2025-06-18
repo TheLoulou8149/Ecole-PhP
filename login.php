@@ -1,4 +1,6 @@
 <?php
+// Démarrer la session
+session_start();
 
 require_once 'config.php';
 require_once 'functions.php';
@@ -24,29 +26,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $table = ($user_type === 'professeur') ? 'professeurs' : 'etudiants';
             
             // Rechercher l'utilisateur
-            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ? AND statut = 'actif'");
+            $stmt = $pdo->prepare("SELECT * FROM $table WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
             // Vérifier le mot de passe
-            if ($user && password_verify($password, $user['mot_de_passe'])) {
+            if ($user && $password === $user['password']) {
                 // Connexion réussie
-                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_id'] = $user_type == 'professeur' ? $user['id_professeur'] : $user['id_etudiant'];
                 $_SESSION['user_type'] = $user_type;
                 $_SESSION['user_name'] = $user['prenom'] . ' ' . $user['nom'];
                 $_SESSION['user_email'] = $user['email'];
                 
                 // Redirection selon le type d'utilisateur
                 if ($user_type === 'professeur') {
-                    redirect('dashboard_professeur.php');
+                    header('Location: main.php');
+                    exit();
                 } else {
-                    redirect('dashboard_etudiant.php');
+                    header('Location: main.php');
+                    exit();
                 }
             } else {
                 $error = "Email ou mot de passe incorrect.";
             }
         } catch (PDOException $e) {
             $error = "Erreur de connexion. Veuillez réessayer.";
+            // Pour le debug (à retirer en production)
+            // $error .= " Détail : " . $e->getMessage();
         }
     }
 }
@@ -178,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
         <form method="POST" action="">
