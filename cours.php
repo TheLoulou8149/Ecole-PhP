@@ -1,12 +1,86 @@
+<?php
+session_start();
+require_once 'config.php';
+
+// Vérification de la connexion
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'];
+
+try {
+    $pdo = getDBConnection();
+    
+    // Récupération des informations utilisateur
+    if ($user_type === 'etudiant') {
+        $stmt = $pdo->prepare("SELECT nom, prenom FROM etudiants WHERE id_etudiant = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user_name = $user_info['prenom'] . ' ' . $user_info['nom'];
+    } else if ($user_type === 'prof') {
+        $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user_name = 'Prof. ' . $user_info['nom'];
+    }
+
+    // Récupération des cours (adapté à votre structure de base)
+    if ($user_type === 'etudiant') {
+        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                         m.intitule AS matiere, p.nom AS prof 
+                  FROM cours c
+                  INNER JOIN matières m ON c.id_matiere = m.id_matiere
+                  INNER JOIN profs p ON c.id_prof = p.id_prof
+                  INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+                  WHERE ce.id_etudiant = ?";
+    } else if ($user_type === 'prof') {
+        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                         m.intitule AS matiere, p.nom AS prof 
+                  FROM cours c
+                  INNER JOIN matières m ON c.id_matiere = m.id_matiere
+                  INNER JOIN profs p ON c.id_prof = p.id_prof
+                  WHERE c.id_prof = ?";
+    }
+
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$user_id]);
+    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calcul des statistiques
+    $totalCours = count($cours);
+    $today = date('Y-m-d');
+    $coursToday = 0;
+    $coursThisWeek = 0;
+
+    // Dates pour la semaine en cours
+    $startOfWeek = date('Y-m-d', strtotime('monday this week'));
+    $endOfWeek = date('Y-m-d', strtotime('sunday this week'));
+
+    foreach ($cours as $c) {
+        if ($c['date'] == $today) {
+            $coursToday++;
+        }
+        if ($c['date'] >= $startOfWeek && $c['date'] <= $endOfWeek) {
+            $coursThisWeek++;
+        }
+    }
+
+} catch (PDOException $e) {
+    die("Erreur de base de données : " . $e->getMessage());
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes Cours - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-     <?php include 'header.php'; ?>
-   <style>
+    <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --secondary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -38,12 +112,12 @@
             min-height: 100vh;
             line-height: 1.6;
             color: var(--text-primary);
+            padding: 20px;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
         }
 
         .header {
@@ -503,8 +577,8 @@
         <div class="header">
             <h1><i class="fas fa-graduation-cap"></i> Mes Cours</h1>
             <div class="user-info">
-                <span><i class="fas fa-user"></i> Utilisateur connecté</span>
-                <span class="user-badge"><i class="fas fa-student"></i> Étudiant</span>
+                <span><i class="fas fa-user"></i> <?php echo htmlspecialchars($user_name); ?></span>
+                <span class="user-badge"><i class="fas fa-<?php echo ($user_type === 'etudiant') ? 'user-graduate' : 'chalkboard-teacher'; ?>"></i> <?php echo ucfirst($user_type); ?></span>
             </div>
         </div>
 
@@ -512,32 +586,27 @@
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-book"></i></div>
-                    <div class="stat-number" id="totalCours">12</div>
+                    <div class="stat-number" id="totalCours"><?php echo $totalCours; ?></div>
                     <div class="stat-label">Cours au total</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
-                    <div class="stat-number" id="coursSemaine">8</div>
+                    <div class="stat-number" id="coursSemaine"><?php echo $coursThisWeek; ?></div>
                     <div class="stat-label">Cette semaine</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-number" id="coursAujourdhui">3</div>
+                    <div class="stat-number" id="coursAujourdhui"><?php echo $coursToday; ?></div>
                     <div class="stat-label">Aujourd'hui</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-number" id="coursCompletes">5</div>
-                    <div class="stat-label">Complétés</div>
                 </div>
             </div>
 
             <div class="controls">
                 <div class="view-toggle">
-                    <button class="toggle-btn active" onclick="showCalendar()">
+                    <button class="toggle-btn active" id="calendarBtn">
                         <i class="fas fa-calendar-alt"></i> Calendrier
                     </button>
-                    <button class="toggle-btn" onclick="showList()">
+                    <button class="toggle-btn" id="listBtn">
                         <i class="fas fa-list"></i> Liste
                     </button>
                 </div>
@@ -556,6 +625,7 @@
                 <div class="calendar-header">Ven</div>
                 <div class="calendar-header">Sam</div>
                 <div class="calendar-header">Dim</div>
+                <!-- Les jours seront ajoutés dynamiquement par JavaScript -->
             </div>
 
             <div id="listView" class="list-view">
@@ -569,75 +639,11 @@
     </button>
 
     <script>
-        // Données des cours enrichies
-        const coursData = [
-            {
-                id: 1,
-                intitule: "Algèbre linéaire avancée",
-                date: "2024-03-10",
-                plateforme: "Moodle",
-                matiere: "Mathématiques",
-                prof: "Prof. Durand",
-                duree: "2h30",
-                salle: "A301",
-                description: "Étude des espaces vectoriels et transformations linéaires"
-            },
-            {
-                id: 2,
-                intitule: "Analyse mathématique",
-                date: "2024-04-15",
-                plateforme: "Google Classroom",
-                matiere: "Mathématiques",
-                prof: "Prof. Martin",
-                duree: "2h",
-                salle: "B205",
-                description: "Limites, dérivées et intégrales"
-            },
-            {
-                id: 3,
-                intitule: "Mécanique classique",
-                date: "2024-05-20",
-                plateforme: "Google Classroom",
-                matiere: "Physique",
-                prof: "Prof. Dubois",
-                duree: "3h",
-                salle: "Lab 1",
-                description: "Cinématique et dynamique des systèmes"
-            },
-            {
-                id: 4,
-                intitule: "Physique quantique",
-                date: "2024-06-25",
-                plateforme: "EdX",
-                matiere: "Physique",
-                prof: "Prof. Leroy",
-                duree: "2h15",
-                salle: "C102",
-                description: "Introduction aux principes quantiques"
-            },
-            {
-                id: 5,
-                intitule: "Chimie organique",
-                date: "2024-07-12",
-                plateforme: "Khan Academy",
-                matiere: "Chimie",
-                prof: "Prof. Leroy",
-                duree: "2h45",
-                salle: "Lab 2",
-                description: "Réactions et mécanismes organiques"
-            },
-            {
-                id: 6,
-                intitule: "Programmation Python",
-                date: "2024-08-05",
-                plateforme: "Udemy",
-                matiere: "Informatique",
-                prof: "Prof. Morel",
-                duree: "4h",
-                salle: "Info 1",
-                description: "Développement d'applications Python"
-            }
-        ];
+        // Convertir les données PHP en JSON pour JavaScript
+        const coursData = <?php echo json_encode($cours); ?>;
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
 
         function initializeCalendar() {
             const calendarView = document.getElementById('calendarView');
@@ -646,10 +652,6 @@
             calendarView.innerHTML = '';
             headers.forEach(header => calendarView.appendChild(header));
 
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
-            
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
             
@@ -679,6 +681,7 @@
                     courseDiv.className = 'course-item';
                     courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 12)}...`;
                     courseDiv.title = `${cours.intitule} - ${cours.prof}`;
+                    courseDiv.onclick = () => showCourseDetails(cours.id_cours);
                     dayDiv.appendChild(courseDiv);
                 });
                 
@@ -713,14 +716,6 @@
                             ${formatDate(cours.date)}
                         </div>
                         <div class="meta-item">
-                            <i class="fas fa-clock meta-icon"></i>
-                            ${cours.duree}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-map-marker-alt meta-icon"></i>
-                            ${cours.salle}
-                        </div>
-                        <div class="meta-item">
                             <i class="fas fa-user-tie meta-icon"></i>
                             ${cours.prof}
                         </div>
@@ -730,15 +725,11 @@
                         </div>
                     </div>
                     
-                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-style: italic;">
-                        ${cours.description}
-                    </p>
-                    
                     <div class="course-actions">
-                        <button class="action-btn btn-primary">
+                        <button class="action-btn btn-primary" onclick="accessCourse(${cours.id_cours})">
                             <i class="fas fa-play"></i> Accéder
                         </button>
-                        <button class="action-btn btn-secondary">
+                        <button class="action-btn btn-secondary" onclick="showCourseDetails(${cours.id_cours})">
                             <i class="fas fa-info-circle"></i> Détails
                         </button>
                     </div>
@@ -753,26 +744,38 @@
             return date.toLocaleDateString('fr-FR', {
                 weekday: 'short',
                 day: 'numeric',
-                month: 'short'
+                month: 'short',
+                year: 'numeric'
             });
         }
 
         function showCalendar() {
             document.getElementById('calendarView').style.display = 'grid';
             document.getElementById('listView').style.display = 'none';
-            document.querySelectorAll('.toggle-btn')[0].classList.add('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.remove('active');
+            document.getElementById('calendarBtn').classList.add('active');
+            document.getElementById('listBtn').classList.remove('active');
         }
 
         function showList() {
             document.getElementById('calendarView').style.display = 'none';
             document.getElementById('listView').style.display = 'grid';
-            document.querySelectorAll('.toggle-btn')[0].classList.remove('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.add('active');
+            document.getElementById('calendarBtn').classList.remove('active');
+            document.getElementById('listBtn').classList.add('active');
         }
 
         function addNewCourse() {
             alert('Fonctionnalité d\'ajout de cours à implémenter');
+        }
+        
+        function accessCourse(courseId) {
+            alert(`Accès au cours ID: ${courseId} - Cette fonctionnalité est en cours de développement`);
+        }
+        
+        function showCourseDetails(courseId) {
+            const course = coursData.find(c => c.id_cours == courseId);
+            if (course) {
+                alert(`Détails du cours:\n\nTitre: ${course.intitule}\nMatière: ${course.matiere}\nDate: ${formatDate(course.date)}\nProfesseur: ${course.prof}\nPlateforme: ${course.plateforme}`);
+            }
         }
 
         // Recherche en temps réel
@@ -797,6 +800,10 @@
             initializeCalendar();
             loadCoursList();
             
+            // Écouteurs d'événements pour les boutons
+            document.getElementById('calendarBtn').addEventListener('click', showCalendar);
+            document.getElementById('listBtn').addEventListener('click', showList);
+            
             // Animation d'entrée pour les stats
             const statCards = document.querySelectorAll('.stat-card');
             statCards.forEach((card, index) => {
@@ -805,6 +812,5 @@
             });
         });
     </script>
-    <?php include 'footer.php'; ?>
 </body>
 </html>
