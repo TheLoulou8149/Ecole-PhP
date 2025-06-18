@@ -1,36 +1,31 @@
 <?php
-
-// Inclure l'en-tête HTML ici
-require_once 'header.php';
-
-// Démarrer la session
+// Démarrer la session : doit être la toute première instruction
 session_start();
 
-// Vérifier si le fichier config.php existe
-if (!file_exists('config.php')) {
-    die("Erreur : Le fichier config.php est manquant.");
+// Vérifier si l'utilisateur est connecté avant tout affichage
+if (empty($_SESSION['user_type']) || $_SESSION['user_type'] !== 'etudiant') {
+    header('Location: login.php');
+    exit();
 }
 
+// Inclure la config (aucun affichage ne doit avoir eu lieu avant)
 require_once 'config.php';
 
-// Vérifier si la fonction getDBConnection() existe
+// Vérifier la fonction de connexion
 if (!function_exists('getDBConnection')) {
     die("Erreur : La fonction getDBConnection() est absente du fichier config.php.");
 }
 
 $pdo = getDBConnection();
-
 if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Vérifier si l'utilisateur est connecté
-if (empty($_SESSION['id_etudiant'])) {
-    header('Location: login.php');
-    exit();
-}
+// Récupérer l'ID étudiant depuis la session
+$id_etudiant = (int) $_SESSION['user_id']; // on utilise ici la clé correcte définie dans login.php
 
-$id_etudiant = (int) $_SESSION['id_etudiant'];
+// Inclure l'en-tête (seulement après toutes les redirections et session_start)
+require_once 'header.php';
 
 // Bloc try/catch
 try {
