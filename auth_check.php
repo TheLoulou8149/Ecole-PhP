@@ -1,17 +1,12 @@
 <?php
 require_once 'config.php';
 
-// Fonction de redirection sécurisée
-function redirect($url) {
-    // Vérifie qu'on ne redirige pas vers la page actuelle
-    $current_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $target_path = parse_url($url, PHP_URL_PATH);
-    
-    if ($current_path !== $target_path) {
-        header('Location: ' . $url);
+function requireLogin() {
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+        header('Location: login.php');
         exit();
     }
-    // Si même page, on ne redirige pas (évite les boucles)
 }
 
 // Fonctions de vérification d'authentification (inchangées)
