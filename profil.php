@@ -1,5 +1,31 @@
 <?php
-require_once 'config.php'; // doit être AVANT toute utilisation de $pdo
+// Démarrer la session
+session_start();
+
+// Vérifier si le fichier config.php existe
+if (!file_exists('config.php')) {
+    die("Erreur : Le fichier config.php n'existe pas. Veuillez le créer avec la configuration de votre base de données.");
+}
+
+require_once 'config.php'; // Inclure le fichier de configuration
+
+// Si $pdo n'existe pas, essayer d'utiliser les variables de config.php
+if (!isset($pdo)) {
+    try {
+        // Essayer d'utiliser les variables définies dans config.php
+        if (isset($host, $dbname, $user, $pass)) {
+            $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } elseif (isset($servername, $database, $username, $password)) {
+            $pdo = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } else {
+            die("Erreur : Variables de connexion non trouvées dans config.php");
+        }
+    } catch(PDOException $e) {
+        die("Erreur de connexion : " . $e->getMessage());
+    }
+}
 
 // Debug : Afficher tous les étudiants pour trouver Jean Dupont
 try {
@@ -9,8 +35,12 @@ try {
     
     echo "<div style='background: #1e40af; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;'>";
     echo "<strong>🔍 LISTE DES ÉTUDIANTS DANS LA BASE :</strong><br>";
-    foreach ($tous_etudiants as $etud) {
-        echo "ID: " . $etud['id_etudiant'] . " - " . htmlspecialchars($etud['prenom'] . ' ' . $etud['nom']) . "<br>";
+    if (empty($tous_etudiants)) {
+        echo "Aucun étudiant trouvé dans la base de données.";
+    } else {
+        foreach ($tous_etudiants as $etud) {
+            echo "ID: " . $etud['id_etudiant'] . " - " . htmlspecialchars($etud['prenom'] . ' ' . $etud['nom']) . "<br>";
+        }
     }
     echo "</div>";
 } catch(PDOException $e) {
@@ -24,7 +54,7 @@ if (!isset($_SESSION['id_etudiant'])) {
     
     echo "<div style='background: orange; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;'>
             <strong>🧪 MODE TEST:</strong> Utilisation de l'étudiant ID=$id_etudiant pour les tests<br>
-            <small>Changez cette valeur ligne 25 du code avec l'ID correct de Jean Dupont</small>
+            <small>Changez cette valeur ligne 32 du code avec l'ID correct de Jean Dupont</small>
           </div>";
 } else {
     $id_etudiant = $_SESSION['id_etudiant'];
@@ -460,16 +490,16 @@ try {
                                     <span class="course-detail-value">
                                         <?php 
                                         $date = new DateTime($c['date']);
-                                        echo $date->format('d/m/Y');
-                                        ?>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                        echo $date->format('d/m/Y');
+                        ?>
+                    </span>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
-    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</div>
 </body>
 </html>
