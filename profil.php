@@ -16,38 +16,15 @@ if (function_exists('getDBConnection')) {
     die("Erreur : La fonction getDBConnection() n'existe pas dans config.php");
 }
 
-// Debug : Afficher tous les étudiants pour trouver Jean Dupont
-try {
-    $debug_stmt = $pdo->prepare("SELECT id_etudiant, nom, prenom FROM etudiants ORDER BY id_etudiant");
-    $debug_stmt->execute();
-    $tous_etudiants = $debug_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<div style='background: #1e40af; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;'>";
-    echo "<strong>🔍 LISTE DES ÉTUDIANTS DANS LA BASE :</strong><br>";
-    if (empty($tous_etudiants)) {
-        echo "Aucun étudiant trouvé dans la base de données.";
-    } else {
-        foreach ($tous_etudiants as $etud) {
-            echo "ID: " . $etud['id_etudiant'] . " - " . htmlspecialchars($etud['prenom'] . ' ' . $etud['nom']) . "<br>";
-        }
-    }
-    echo "</div>";
-} catch(PDOException $e) {
-    echo "<div style='background: red; color: white; padding: 10px;'>Erreur debug: " . $e->getMessage() . "</div>";
-}
-
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['id_etudiant'])) {
-    // CHANGEZ CET ID SELON CE QUI S'AFFICHE CI-DESSUS POUR JEAN DUPONT
-    $id_etudiant = 1; // ← MODIFIEZ CE CHIFFRE avec l'ID de Jean Dupont
-    
-    echo "<div style='background: orange; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;'>
-            <strong>🧪 MODE TEST:</strong> Utilisation de l'étudiant ID=$id_etudiant pour les tests<br>
-            <small>Changez cette valeur ligne 32 du code avec l'ID correct de Jean Dupont</small>
-          </div>";
-} else {
-    $id_etudiant = $_SESSION['id_etudiant'];
+    // Rediriger vers la page de connexion si pas connecté
+    header('Location: login.php');
+    exit();
 }
+
+// Récupérer l'ID de l'étudiant connecté
+$id_etudiant = $_SESSION['id_etudiant'];
 
 try {
     // Récupérer les informations de l'étudiant
