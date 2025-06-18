@@ -1,60 +1,143 @@
+<?php
+session_start();
+require_once 'config.php';
+
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'];
+
+try {
+    $pdo = getConnection();
+    
+    // Récupérer les informations de l'utilisateur
+    if ($user_type === 'etudiant') {
+        $stmt = $pdo->prepare("SELECT nom, prenom, email FROM etudiants WHERE id_etudiant = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Récupérer les matières de l'étudiant
+        $query = "
+            SELECT 
+                m.id_matiere,
+                m.intitule,
+                COUNT(c.id_cours) as cours_count,
+                SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
+                SUM(TIME_TO_SEC(c.duree)/3600) as total_hours,
+                'active' as status
+            FROM matieres m
+            INNER JOIN cours c ON m.id_matiere = c.id_matiere
+            INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+            WHERE ce.id_etudiant = ?
+            GROUP BY m.id_matiere, m.intitule
+            ORDER BY m.intitule
+        ";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$user_id]);
+        $matieres_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } else if ($user_type === 'prof') {
+        $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Récupérer les matières du professeur
+        $query = "
+            SELECT 
+                m.id_matiere,
+                m.intitule,
+                COUNT(c.id_cours) as cours_count,
+                SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
+                SUM(TIME_TO_SEC(c.duree)/3600) as total_hours,
+                'active' as status
+            FROM matieres m
+            INNER JOIN cours c ON m.id_matiere = c.id_matiere
+            WHERE c.id_prof = ?
+            GROUP BY m.id_matiere, m.intitule
+            ORDER BY m.intitule
+        ";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$user_id]);
+        $matieres_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Calculer les statistiques globales
+    $total_matieres = count($matieres_data);
+    $matieres_actives = 0;
+    $matieres_completes = 0;
+    
+    foreach ($matieres_data as $matiere) {
+        if ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) {
+            $matieres_completes++;
+        } else {
+            $matieres_actives++;
+        }
+    }
+    
+} catch (PDOException $e) {
+    die("Erreur lors de la récupération des données : " . $e->getMessage());
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mes Cours - École</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-     <?php include 'header.php'; ?>
-   <style>
+    <title>Mes Matières - École</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   
+  <?php include 'header.php'; ?>
+ 
+    <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --accent-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-            --success-color: #00b894;
-            --warning-color: #fdcb6e;
-            --danger-color: #ff7675;
-            --text-primary: #2d3436;
-            --text-secondary: #636e72;
-            --background-light: #f8f9fa;
-            --white: #ffffff;
-            --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.12);
-            --shadow-heavy: 0 15px 50px rgba(0, 0, 0, 0.15);
-            --border-radius: 16px;
-            --border-radius-large: 24px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #ff7675;
+            --light: #f8f9fa;
+            --dark: #2d3436;
+            --gray: #636e72;
+            --light-gray: #dfe6e9;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --hover-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
             min-height: 100vh;
-            line-height: 1.6;
-            color: var(--text-primary);
+            padding: 20px;
+            color: var(--dark);
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
             margin-bottom: 30px;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
             position: relative;
             overflow: hidden;
         }
@@ -65,67 +148,58 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: var(--secondary-gradient);
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.2;
         }
 
         .header h1 {
-            font-size: clamp(2rem, 4vw, 3rem);
+            font-size: 2.4rem;
             font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .user-info {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
             font-size: 1.1rem;
-            color: var(--text-secondary);
-            flex-wrap: wrap;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
         }
 
-        .user-badge {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
+        .user-info span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .main-content {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: var(--border-radius-large);
-            padding: 40px;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stats {
+        .stats-overview {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 25px;
             margin-bottom: 40px;
         }
 
         .stat-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(10px);
+            background: white;
             padding: 30px;
-            border-radius: var(--border-radius);
+            border-radius: 20px;
             text-align: center;
-            box-shadow: var(--shadow-light);
+            box-shadow: var(--card-shadow);
             transition: var(--transition);
-            border: 1px solid rgba(255, 255, 255, 0.3);
             position: relative;
             overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--hover-shadow);
         }
 
         .stat-card::before {
@@ -133,367 +207,373 @@
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--primary-gradient);
-            transform: scaleX(0);
-            transition: var(--transition);
+            height: 8px;
+            width: 100%;
+            background: linear-gradient(90deg, var(--color-start), var(--color-end));
         }
 
-        .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-heavy);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            opacity: 0.8;
-        }
+        .stat-card.total { --color-start: #6c5ce7; --color-end: #a29bfe; }
+        .stat-card.active { --color-start: #00b894; --color-end: #55efc4; }
+        .stat-card.completed { --color-start: #fdcb6e; --color-end: #ffeaa7; }
 
         .stat-number {
-            font-size: 2.8rem;
+            font-size: 3.2rem;
             font-weight: 800;
-            background: var(--primary-gradient);
+            margin: 15px 0 10px;
+            background: linear-gradient(90deg, var(--color-start), var(--color-end));
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 10px;
-            line-height: 1;
+            color: transparent;
         }
 
         .stat-label {
-            color: var(--text-secondary);
-            font-weight: 600;
+            color: var(--gray);
+            font-weight: 500;
             font-size: 1.1rem;
         }
 
-        .controls {
+        .stat-icon {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, var(--color-start), var(--color-end));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .search-filter {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
-            gap: 20px;
+            margin-bottom: 35px;
+            gap: 25px;
             flex-wrap: wrap;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
         }
 
-        .view-toggle {
-            display: flex;
-            background: var(--background-light);
-            border-radius: 12px;
-            padding: 4px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .toggle-btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: var(--transition);
-            font-weight: 600;
-            font-size: 0.95rem;
-            background: transparent;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toggle-btn.active {
-            background: var(--primary-gradient);
-            color: white;
-            box-shadow: var(--shadow-light);
-        }
-
-        .search-container {
+        .search-box {
+            flex: 1;
+            min-width: 300px;
             position: relative;
-            max-width: 300px;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 20px 12px 45px;
-            border: 2px solid transparent;
-            border-radius: 12px;
-            font-size: 1rem;
-            background: var(--background-light);
+            padding: 18px 25px 18px 60px;
+            border: 2px solid var(--light-gray);
+            border-radius: 50px;
+            font-size: 1.1rem;
             transition: var(--transition);
+            background: var(--light);
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
         }
 
         .search-icon {
             position: absolute;
-            left: 15px;
+            left: 25px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-secondary);
+            color: var(--gray);
+            font-size: 1.4rem;
         }
 
-        .calendar-view {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
-            background: var(--background-light);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-light);
-        }
-
-        .calendar-header {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 20px 10px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .calendar-day {
-            background: white;
-            min-height: 140px;
-            padding: 15px 10px;
-            position: relative;
-            transition: var(--transition);
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .calendar-day:hover {
-            background: #f8f9fa;
-            transform: scale(1.02);
-            box-shadow: var(--shadow-light);
-        }
-
-        .day-number {
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 10px;
+        .filter-select {
+            padding: 17px 25px;
+            border: 2px solid var(--light-gray);
+            border-radius: 50px;
             font-size: 1.1rem;
-        }
-
-        .course-item {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 8px;
-            margin: 3px 0;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
+            background: var(--light);
             cursor: pointer;
             transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636e72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 20px center;
+            background-size: 18px;
+            padding-right: 60px;
         }
 
-        .course-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
         }
 
-        .list-view {
-            display: none;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 25px;
+        .matieres-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
         }
 
-        .course-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(10px);
-            border-radius: var(--border-radius);
+        .matiere-card {
+            background: white;
+            border-radius: 25px;
             padding: 30px;
-            box-shadow: var(--shadow-light);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: var(--card-shadow);
             transition: var(--transition);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-top: 8px solid;
         }
 
-        .course-card::before {
+        .matiere-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .matiere-card::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: var(--primary-gradient);
+            height: 8px;
+            background: linear-gradient(90deg, var(--color-start), var(--color-end));
         }
 
-        .course-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-heavy);
-        }
+        .matiere-card.mathematiques { --color-start: #ff6b6b; --color-end: #ee5a24; border-top-color: #ff6b6b; }
+        .matiere-card.physique { --color-start: #4ecdc4; --color-end: #44a08d; border-top-color: #4ecdc4; }
+        .matiere-card.chimie { --color-start: #45b7d1; --color-end: #96c93d; border-top-color: #45b7d1; }
+        .matiere-card.informatique { --color-start: #96ceb4; --color-end: #ffeaa7; border-top-color: #96ceb4; }
+        .matiere-card.litterature { --color-start: #ffeaa7; --color-end: #fab1a0; border-top-color: #ffeaa7; }
+        .matiere-card.histoire { --color-start: #fd79a8; --color-end: #fdcb6e; border-top-color: #fd79a8; }
+        .matiere-card.philosophie { --color-start: #a29bfe; --color-end: #6c5ce7; border-top-color: #a29bfe; }
+        .matiere-card.economie { --color-start: #fd8c00; --color-end: #ff7675; border-top-color: #fd8c00; }
+        .matiere-card.biologie { --color-start: #00b894; --color-end: #55a3ff; border-top-color: #00b894; }
+        .matiere-card.droit { --color-start: #636e72; --color-end: #4a4a4a; border-top-color: #636e72; }
 
-        .course-header {
+        .matiere-header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 18px;
         }
 
-        .course-title {
-            font-size: 1.4rem;
+        .matiere-icon {
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, var(--color-start), var(--color-end));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            flex-shrink: 0;
+        }
+
+        .matiere-title {
+            font-size: 1.6rem;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--dark);
             line-height: 1.3;
         }
 
-        .course-subject {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .course-meta {
+        .matiere-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(240, 242, 245, 0.6);
+            border-radius: 18px;
+            backdrop-filter: blur(5px);
         }
 
-        .meta-item {
+        .matiere-stat {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .matiere-stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .matiere-stat-label {
+            font-size: 0.95rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .progress-container {
+            margin-bottom: 25px;
+        }
+
+        .progress-header {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: var(--gray);
+            font-weight: 500;
         }
 
-        .meta-icon {
-            color: #667eea;
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--light-gray);
+            border-radius: 10px;
+            overflow: hidden;
         }
 
-        .course-actions {
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-start), var(--color-end));
+            border-radius: 10px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        .matiere-actions {
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            margin-top: auto;
+            padding-top: 15px;
         }
 
         .action-btn {
             flex: 1;
-            padding: 12px 20px;
+            padding: 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 15px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 1.05rem;
             transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .btn-primary {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             color: white;
         }
 
         .btn-secondary {
-            background: var(--background-light);
-            color: var(--text-primary);
-            border: 2px solid #e9ecef;
+            background: white;
+            color: var(--dark);
+            border: 2px solid var(--light-gray);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(108, 92, 231, 0.35);
         }
 
         .btn-secondary:hover {
-            background: #e9ecef;
+            background: var(--light);
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
-        @media (max-width: 1024px) {
-            .list-view {
-                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 2;
+        }
+
+        .status-active {
+            background: rgba(0, 184, 148, 0.15);
+            color: #00b894;
+        }
+
+        .status-completed {
+            background: rgba(253, 203, 110, 0.2);
+            color: #e17055;
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            color: #dfe6e9;
+            margin-bottom: 20px;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @media (max-width: 1200px) {
+            .matieres-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             }
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 15px;
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
             }
-
-            .header, .main-content {
-                padding: 25px;
+            
+            .user-info {
+                align-items: flex-start;
             }
-
-            .calendar-view {
-                grid-template-columns: 1fr;
-            }
-
-            .calendar-day {
-                min-height: auto;
-                padding: 20px;
-            }
-
-            .list-view {
-                grid-template-columns: 1fr;
-            }
-
-            .controls {
+            
+            .search-filter {
                 flex-direction: column;
                 align-items: stretch;
             }
-
-            .view-toggle {
-                justify-content: center;
+            
+            .header h1 {
+                font-size: 2rem;
             }
+            
+            .matiere-card {
+                padding: 25px;
+            }
+        }
 
-            .stats {
+        @media (max-width: 480px) {
+            .matieres-grid {
                 grid-template-columns: 1fr;
             }
-        }
-
-        .floating-add {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: var(--accent-gradient);
-            border: none;
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: var(--shadow-medium);
-            transition: var(--transition);
-            z-index: 1000;
-        }
-
-        .floating-add:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-heavy);
-        }
-
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+            
+            .matiere-stats {
+                grid-template-columns: 1fr;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            .header {
+                padding: 20px;
             }
         }
     </style>
@@ -501,310 +581,200 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-graduation-cap"></i> Mes Cours</h1>
+            <h1><i class="fas fa-book-open"></i> Mes Matières</h1>
             <div class="user-info">
-                <span><i class="fas fa-user"></i> Utilisateur connecté</span>
-                <span class="user-badge"><i class="fas fa-student"></i> Étudiant</span>
+                <span>
+                    <i class="fas fa-user"></i>
+                    <?php 
+                    if ($user_type === 'etudiant') {
+                        echo htmlspecialchars($user_info['prenom'] . ' ' . $user_info['nom']);
+                    } else {
+                        echo 'Prof. ' . htmlspecialchars($user_info['nom']);
+                    }
+                    ?>
+                </span>
+                <span>
+                    <i class="fas fa-<?php echo $user_type === 'etudiant' ? 'user-graduate' : 'chalkboard-teacher'; ?>"></i>
+                    <?php echo ucfirst($user_type); ?>
+                </span>
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-book"></i></div>
-                    <div class="stat-number" id="totalCours">12</div>
-                    <div class="stat-label">Cours au total</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
-                    <div class="stat-number" id="coursSemaine">8</div>
-                    <div class="stat-label">Cette semaine</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-number" id="coursAujourdhui">3</div>
-                    <div class="stat-label">Aujourd'hui</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-number" id="coursCompletes">5</div>
-                    <div class="stat-label">Complétés</div>
-                </div>
+        <div class="stats-overview">
+            <div class="stat-card total">
+                <div class="stat-icon"><i class="fas fa-book"></i></div>
+                <div class="stat-number total" id="totalMatieres"><?php echo $total_matieres; ?></div>
+                <div class="stat-label">Matières au total</div>
             </div>
+            <div class="stat-card active">
+                <div class="stat-icon"><i class="fas fa-running"></i></div>
+                <div class="stat-number active" id="matieresActives"><?php echo $matieres_actives; ?></div>
+                <div class="stat-label">Matières actives</div>
+            </div>
+            <div class="stat-card completed">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-number completed" id="matieresCompletes"><?php echo $matieres_completes; ?></div>
+                <div class="stat-label">Matières complétées</div>
+            </div>
+        </div>
 
-            <div class="controls">
-                <div class="view-toggle">
-                    <button class="toggle-btn active" onclick="showCalendar()">
-                        <i class="fas fa-calendar-alt"></i> Calendrier
-                    </button>
-                    <button class="toggle-btn" onclick="showList()">
-                        <i class="fas fa-list"></i> Liste
-                    </button>
-                </div>
-                
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Rechercher un cours..." id="searchInput">
-                    <i class="fas fa-search search-icon"></i>
-                </div>
+        <div class="search-filter">
+            <div class="search-box">
+                <span class="search-icon"><i class="fas fa-search"></i></span>
+                <input type="text" class="search-input" placeholder="Rechercher une matière..." id="searchInput">
             </div>
+            <select class="filter-select" id="filterSelect">
+                <option value="all">Toutes les matières</option>
+                <option value="active">Matières actives</option>
+                <option value="completed">Matières complétées</option>
+            </select>
+        </div>
 
-            <div id="calendarView" class="calendar-view">
-                <div class="calendar-header">Lun</div>
-                <div class="calendar-header">Mar</div>
-                <div class="calendar-header">Mer</div>
-                <div class="calendar-header">Jeu</div>
-                <div class="calendar-header">Ven</div>
-                <div class="calendar-header">Sam</div>
-                <div class="calendar-header">Dim</div>
-            </div>
-
-            <div id="listView" class="list-view">
-                <!-- Les cours seront chargés ici dynamiquement -->
-            </div>
+        <div class="matieres-grid" id="matieresGrid">
+            <?php if (empty($matieres_data)): ?>
+                <div class="no-results">
+                    <i class="fas fa-book"></i>
+                    <h3>Aucune matière trouvée</h3>
+                    <p>Vous n'avez pas encore de matières assignées.</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($matieres_data as $matiere): ?>
+                    <?php 
+                    $progress = ($matiere['cours_count'] > 0) ? ($matiere['completed_cours'] / $matiere['cours_count']) * 100 : 0;
+                    $statusClass = ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) ? 'status-completed' : 'status-active';
+                    $statusText = ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) ? 'Terminée' : 'En cours';
+                    $matiereClass = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $matiere['intitule']));
+                    ?>
+                    <div class="matiere-card <?php echo $matiereClass; ?>">
+                        <div class="status-badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></div>
+                        <div class="matiere-header">
+                            <div class="matiere-icon">
+                                <?php 
+                                // Icônes correspondant aux matières
+                                $icons = [
+                                    'mathématique' => '🧮',
+                                    'physique' => '⚛️',
+                                    'chimie' => '🧪',
+                                    'informatique' => '💻',
+                                    'littérature' => '📚',
+                                    'histoire' => '🏛️',
+                                    'philosophie' => '🤔',
+                                    'économie' => '💰',
+                                    'biologie' => '🧬',
+                                    'droit' => '⚖️'
+                                ];
+                                
+                                $icon = '📘'; // Icône par défaut
+                                foreach ($icons as $key => $value) {
+                                    if (stripos($matiere['intitule'], $key) !== false) {
+                                        $icon = $value;
+                                        break;
+                                    }
+                                }
+                                echo $icon;
+                                ?>
+                            </div>
+                            <div class="matiere-title"><?php echo htmlspecialchars($matiere['intitule']); ?></div>
+                        </div>
+                        
+                        <div class="matiere-stats">
+                            <div class="matiere-stat">
+                                <div class="matiere-stat-number"><?php echo $matiere['cours_count']; ?></div>
+                                <div class="matiere-stat-label">Cours</div>
+                            </div>
+                            <div class="matiere-stat">
+                                <div class="matiere-stat-number"><?php echo $matiere['completed_cours']; ?></div>
+                                <div class="matiere-stat-label">Complétés</div>
+                            </div>
+                            <div class="matiere-stat">
+                                <div class="matiere-stat-number"><?php echo number_format($matiere['total_hours'], 1); ?>h</div>
+                                <div class="matiere-stat-label">Total</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-container">
+                            <div class="progress-header">
+                                <span>Progression</span>
+                                <span><?php echo number_format($progress, 0); ?>%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: <?php echo $progress; ?>%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="matiere-actions">
+                            <button class="action-btn btn-primary" onclick="accessMatiere(<?php echo $matiere['id_matiere']; ?>)">
+                                <i class="fas fa-play-circle"></i> Continuer
+                            </button>
+                            <button class="action-btn btn-secondary" onclick="showMatiereDetails(<?php echo $matiere['id_matiere']; ?>)">
+                                <i class="fas fa-info-circle"></i> Détails
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
-    <button class="floating-add" onclick="addNewCourse()">
-        <i class="fas fa-plus"></i>
-    </button>
-
     <script>
-        // Données des cours enrichies
-        const coursData = [
-            {
-                id: 1,
-                intitule: "Algèbre linéaire avancée",
-                date: "2024-03-10",
-                plateforme: "Moodle",
-                matiere: "Mathématiques",
-                prof: "Prof. Durand",
-                duree: "2h30",
-                salle: "A301",
-                description: "Étude des espaces vectoriels et transformations linéaires"
-            },
-            {
-                id: 2,
-                intitule: "Analyse mathématique",
-                date: "2024-04-15",
-                plateforme: "Google Classroom",
-                matiere: "Mathématiques",
-                prof: "Prof. Martin",
-                duree: "2h",
-                salle: "B205",
-                description: "Limites, dérivées et intégrales"
-            },
-            {
-                id: 3,
-                intitule: "Mécanique classique",
-                date: "2024-05-20",
-                plateforme: "Google Classroom",
-                matiere: "Physique",
-                prof: "Prof. Dubois",
-                duree: "3h",
-                salle: "Lab 1",
-                description: "Cinématique et dynamique des systèmes"
-            },
-            {
-                id: 4,
-                intitule: "Physique quantique",
-                date: "2024-06-25",
-                plateforme: "EdX",
-                matiere: "Physique",
-                prof: "Prof. Leroy",
-                duree: "2h15",
-                salle: "C102",
-                description: "Introduction aux principes quantiques"
-            },
-            {
-                id: 5,
-                intitule: "Chimie organique",
-                date: "2024-07-12",
-                plateforme: "Khan Academy",
-                matiere: "Chimie",
-                prof: "Prof. Leroy",
-                duree: "2h45",
-                salle: "Lab 2",
-                description: "Réactions et mécanismes organiques"
-            },
-            {
-                id: 6,
-                intitule: "Programmation Python",
-                date: "2024-08-05",
-                plateforme: "Udemy",
-                matiere: "Informatique",
-                prof: "Prof. Morel",
-                duree: "4h",
-                salle: "Info 1",
-                description: "Développement d'applications Python"
-            }
-        ];
-
-        function initializeCalendar() {
-            const calendarView = document.getElementById('calendarView');
-            // Conserver les en-têtes
-            const headers = calendarView.querySelectorAll('.calendar-header');
-            calendarView.innerHTML = '';
-            headers.forEach(header => calendarView.appendChild(header));
-
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
+        // Fonction de filtrage des matières
+        function filterMatieres() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filterValue = document.getElementById('filterSelect').value;
+            const matiereCards = document.querySelectorAll('.matiere-card');
+            let visibleCount = 0;
             
-            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
-            // Ajouter les jours vides du début
-            for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'calendar-day';
-                calendarView.appendChild(emptyDay);
-            }
-            
-            // Ajouter les jours du mois
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day fade-in';
+            matiereCards.forEach(card => {
+                const title = card.querySelector('.matiere-title').textContent.toLowerCase();
+                const status = card.querySelector('.status-badge').textContent.toLowerCase();
                 
-                const dayNumber = document.createElement('div');
-                dayNumber.className = 'day-number';
-                dayNumber.textContent = day;
-                dayDiv.appendChild(dayNumber);
+                const matchesSearch = title.includes(searchTerm);
+                const matchesFilter = filterValue === 'all' || 
+                                     (filterValue === 'active' && status.includes('en cours')) ||
+                                     (filterValue === 'completed' && status.includes('terminée'));
                 
-                // Vérifier s'il y a des cours ce jour-là
-                const currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const coursThisDay = coursData.filter(cours => cours.date === currentDate);
-                
-                coursThisDay.forEach(cours => {
-                    const courseDiv = document.createElement('div');
-                    courseDiv.className = 'course-item';
-                    courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 12)}...`;
-                    courseDiv.title = `${cours.intitule} - ${cours.prof}`;
-                    dayDiv.appendChild(courseDiv);
-                });
-                
-                // Marquer aujourd'hui
-                if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    dayDiv.style.background = 'linear-gradient(135deg, #667eea22, #764ba222)';
-                    dayDiv.style.border = '2px solid #667eea';
-                }
-                
-                calendarView.appendChild(dayDiv);
-            }
-        }
-
-        function loadCoursList() {
-            const listView = document.getElementById('listView');
-            listView.innerHTML = '';
-            
-            coursData.forEach((cours, index) => {
-                const courseCard = document.createElement('div');
-                courseCard.className = `course-card fade-in`;
-                courseCard.style.animationDelay = `${index * 0.1}s`;
-                
-                courseCard.innerHTML = `
-                    <div class="course-header">
-                        <div class="course-title">${cours.intitule}</div>
-                        <div class="course-subject">${cours.matiere}</div>
-                    </div>
-                    
-                    <div class="course-meta">
-                        <div class="meta-item">
-                            <i class="fas fa-calendar meta-icon"></i>
-                            ${formatDate(cours.date)}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-clock meta-icon"></i>
-                            ${cours.duree}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-map-marker-alt meta-icon"></i>
-                            ${cours.salle}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-user-tie meta-icon"></i>
-                            ${cours.prof}
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-laptop meta-icon"></i>
-                            ${cours.plateforme}
-                        </div>
-                    </div>
-                    
-                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-style: italic;">
-                        ${cours.description}
-                    </p>
-                    
-                    <div class="course-actions">
-                        <button class="action-btn btn-primary">
-                            <i class="fas fa-play"></i> Accéder
-                        </button>
-                        <button class="action-btn btn-secondary">
-                            <i class="fas fa-info-circle"></i> Détails
-                        </button>
-                    </div>
-                `;
-                
-                listView.appendChild(courseCard);
-            });
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('fr-FR', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short'
-            });
-        }
-
-        function showCalendar() {
-            document.getElementById('calendarView').style.display = 'grid';
-            document.getElementById('listView').style.display = 'none';
-            document.querySelectorAll('.toggle-btn')[0].classList.add('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.remove('active');
-        }
-
-        function showList() {
-            document.getElementById('calendarView').style.display = 'none';
-            document.getElementById('listView').style.display = 'grid';
-            document.querySelectorAll('.toggle-btn')[0].classList.remove('active');
-            document.querySelectorAll('.toggle-btn')[1].classList.add('active');
-        }
-
-        function addNewCourse() {
-            alert('Fonctionnalité d\'ajout de cours à implémenter');
-        }
-
-        // Recherche en temps réel
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const courseCards = document.querySelectorAll('.course-card');
-            
-            courseCards.forEach(card => {
-                const title = card.querySelector('.course-title').textContent.toLowerCase();
-                const subject = card.querySelector('.course-subject').textContent.toLowerCase();
-                
-                if (title.includes(searchTerm) || subject.includes(searchTerm)) {
-                    card.style.display = 'block';
+                if (matchesSearch && matchesFilter) {
+                    card.style.display = 'flex';
+                    visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
             });
-        });
-
+            
+            // Afficher le message si aucun résultat
+            const noResults = document.querySelector('.no-results');
+            if (noResults) {
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+        
+        // Écouteurs d'événements
+        document.getElementById('searchInput').addEventListener('input', filterMatieres);
+        document.getElementById('filterSelect').addEventListener('change', filterMatieres);
+        
+        // Fonctions d'accès aux matières
+        function accessMatiere(matiereId) {
+            alert(`Accès à la matière ID: ${matiereId} - Cette fonctionnalité est en cours de développement`);
+            // Redirection vers la page des cours de la matière
+            // window.location.href = `cours.php?matiere=${matiereId}`;
+        }
+        
+        function showMatiereDetails(matiereId) {
+            alert(`Détails de la matière ID: ${matiereId} - Cette fonctionnalité est en cours de développement`);
+            // Afficher une modale avec les détails de la matière
+        }
+        
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCalendar();
-            loadCoursList();
-            
-            // Animation d'entrée pour les stats
-            const statCards = document.querySelectorAll('.stat-card');
-            statCards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.2}s`;
-                card.classList.add('fade-in');
+            // Animation au chargement
+            const cards = document.querySelectorAll('.matiere-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
             });
         });
     </script>
-    <?php include 'footer.php'; ?>
+    
+<?php include 'footer.php'; ?>
+
 </body>
 </html>

@@ -1,52 +1,64 @@
 <?php
 require_once 'config.php';
 
-// Définition de la fonction redirect manquante
-function redirect($url) {
-    header('Location: ' . $url);
-    exit();
+function requireLogin() {
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+        header('Location: login.php');
+        exit();
+    }
 }
 
-// Fonction pour vérifier si l'utilisateur est connecté
+// Fonctions de vérification d'authentification (inchangées)
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && isset($_SESSION['user_type']);
 }
 
-// Fonction pour vérifier si l'utilisateur est un professeur
 function isProfesseur() {
     return isLoggedIn() && $_SESSION['user_type'] === 'professeur';
 }
 
-// Fonction pour vérifier si l'utilisateur est un étudiant
 function isEtudiant() {
     return isLoggedIn() && $_SESSION['user_type'] === 'etudiant';
 }
 
-// Fonction pour rediriger vers la page de connexion si non authentifié
+// Nouvelle version de requireLogin avec sécurité anti-boucle
 function requireLogin() {
-    if (!isLoggedIn()) {
+    $current_page = basename($_SERVER['PHP_SELF']);
+    
+    // Si non connecté ET pas déjà sur la page de login
+    if (!isLoggedIn() && $current_page !== 'login.php') {
         $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
         redirect('login.php');
     }
+    
+    // Si déjà connecté ET sur la page de login
+    if (isLoggedIn() && $current_page === 'login.php') {
+        redirect('main.php');
+    }
 }
 
-// Fonction pour rediriger les professeurs uniquement
+// Fonctions de vérification de rôle (inchangées mais optimisées)
 function requireProfesseur() {
-    requireLogin();
+    requireLogin(); // S'assure que l'utilisateur est connecté d'abord
+    
     if (!isProfesseur()) {
+        // Ajout d'un message pour expliquer la redirection
+        $_SESSION['flash_message'] = "Accès réservé aux professeurs";
         redirect('dashboard_etudiant.php');
     }
 }
 
-// Fonction pour rediriger les étudiants uniquement
 function requireEtudiant() {
     requireLogin();
+    
     if (!isEtudiant()) {
+        $_SESSION['flash_message'] = "Accès réservé aux étudiants";
         redirect('dashboard_professeur.php');
     }
 }
 
-// Fonction pour obtenir les informations de l'utilisateur connecté
+// Fonction pour obtenir l'utilisateur courant (optimisée)
 function getCurrentUser() {
     if (!isLoggedIn()) {
         return null;
@@ -55,7 +67,7 @@ function getCurrentUser() {
     return [
         'id' => $_SESSION['user_id'],
         'type' => $_SESSION['user_type'],
-        'name' => $_SESSION['user_name'],
-        'email' => $_SESSION['user_email']
+        'name' => $_SESSION['user_name'] ?? 'Utilisateur',
+        'email' => $_SESSION['user_email'] ?? ''
     ];
 }
