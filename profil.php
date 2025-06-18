@@ -4,50 +4,31 @@ session_start();
 
 // Vérifier si le fichier config.php existe
 if (!file_exists('config.php')) {
-    die("Erreur : Le fichier config.php n'existe pas. Veuillez le créer avec la configuration de votre base de données.");
+    die("Erreur : Le fichier config.php est manquant.");
 }
 
 require_once 'config.php'; // Inclure le fichier de configuration
 
-// Créer la connexion en utilisant la fonction getDBConnection()
-if (function_exists('getDBConnection')) {
-    $pdo = getDBConnection();
-} else {
-    die("Erreur : La fonction getDBConnection() n'existe pas dans config.php");
+// Vérifier si la fonction getDBConnection() existe et récupérer la connexion PDO
+if (!function_exists('getDBConnection')) {
+    die("Erreur : La fonction getDBConnection() est absente du fichier config.php.");
 }
 
-// Debug : Afficher tous les étudiants pour trouver Jean Dupont
-try {
-    $debug_stmt = $pdo->prepare("SELECT id_etudiant, nom, prenom FROM etudiants ORDER BY id_etudiant");
-    $debug_stmt->execute();
-    $tous_etudiants = $debug_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<div style='background: #1e40af; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px;'>";
-    echo "<strong>🔍 LISTE DES ÉTUDIANTS DANS LA BASE :</strong><br>";
-    if (empty($tous_etudiants)) {
-        echo "Aucun étudiant trouvé dans la base de données.";
-    } else {
-        foreach ($tous_etudiants as $etud) {
-            echo "ID: " . $etud['id_etudiant'] . " - " . htmlspecialchars($etud['prenom'] . ' ' . $etud['nom']) . "<br>";
-        }
-    }
-    echo "</div>";
-} catch(PDOException $e) {
-    echo "<div style='background: red; color: white; padding: 10px;'>Erreur debug: " . $e->getMessage() . "</div>";
+$pdo = getDBConnection();
+
+// Vérifier si la connexion PDO est valide
+if (!$pdo instanceof PDO) {
+    die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['id_etudiant'])) {
-    // CHANGEZ CET ID SELON CE QUI S'AFFICHE CI-DESSUS POUR JEAN DUPONT
-    $id_etudiant = 1; // ← MODIFIEZ CE CHIFFRE avec l'ID de Jean Dupont
-    
-    echo "<div style='background: orange; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px;'>
-            <strong>🧪 MODE TEST:</strong> Utilisation de l'étudiant ID=$id_etudiant pour les tests<br>
-            <small>Changez cette valeur ligne 32 du code avec l'ID correct de Jean Dupont</small>
-          </div>";
-} else {
-    $id_etudiant = $_SESSION['id_etudiant'];
+// Vérifier si l'utilisateur est connecté ET que c'est un étudiant
+if (empty($_SESSION['user_id']) || $_SESSION['user_type'] !== 'etudiant') {
+    header('Location: login.php');
+    exit();
 }
+
+// Récupérer l'ID de l'étudiant connecté
+$id_etudiant = (int) $_SESSION['user_id'];
 
 try {
     // Récupérer les informations de l'étudiant
@@ -326,24 +307,25 @@ try {
             font-weight: 500;
         }
 
-        .test-notice {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 16px 24px;
+            padding: 10px 20px;
+            border: none;
             border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
+            text-decoration: none;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .debug-info {
-            background: #1e40af;
-            color: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-family: monospace;
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
 
         @media (max-width: 768px) {
@@ -372,10 +354,20 @@ try {
             .courses-grid {
                 grid-template-columns: 1fr;
             }
+
+            .logout-btn {
+                position: static;
+                display: block;
+                width: 100%;
+                margin-bottom: 20px;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="logout.php" class="logout-btn">Déconnexion</a>
+    
     <div class="container">
         <!-- Section de bienvenue -->
         <div class="welcome-section">
@@ -404,8 +396,12 @@ try {
                     <span class="info-label">Date de naissance</span>
                     <span class="info-value">
                         <?php 
-                        $date = new DateTime($etudiant['date_naissance']);
-                        echo $date->format('d/m/Y');
+                        if (!empty($etudiant['date_naissance'])) {
+                            $date = new DateTime($etudiant['date_naissance']);
+                            echo $date->format('d/m/Y');
+                        } else {
+                            echo 'Non renseignée';
+                        }
                         ?>
                     </span>
                 </div>
@@ -413,10 +409,14 @@ try {
                     <span class="info-label">Âge</span>
                     <span class="info-value">
                         <?php 
-                        $naissance = new DateTime($etudiant['date_naissance']);
-                        $aujourd_hui = new DateTime();
-                        $age = $aujourd_hui->diff($naissance)->y;
-                        echo $age . ' ans';
+                        if (!empty($etudiant['date_naissance'])) {
+                            $naissance = new DateTime($etudiant['date_naissance']);
+                            $aujourd_hui = new DateTime();
+                            $age = $aujourd_hui->diff($naissance)->y;
+                            echo $age . ' ans';
+                        } else {
+                            echo 'Non calculé';
+                        }
                         ?>
                     </span>
                 </div>
@@ -479,16 +479,16 @@ try {
                                     <span class="course-detail-value">
                                         <?php 
                                         $date = new DateTime($c['date']);
-                        echo $date->format('d/m/Y');
-                        ?>
-                    </span>
+                                        echo $date->format('d/m/Y');
+                                        ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-</div>
-</div>
+    </div>
 </body>
 </html>
