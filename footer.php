@@ -273,11 +273,6 @@
     </style>
 </head>
 <body>
-    <!-- Contenu de démo pour montrer le footer en contexte -->
-    <div class="demo-content">
-        <p>Contenu de la page principale...</p>
-    </div>
-
     <!-- Footer -->
     <footer>
         <div class="container">
