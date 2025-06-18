@@ -1,4 +1,8 @@
 <?php
+
+// Inclure l'en-tête HTML ici
+require_once 'header.php';
+
 // Démarrer la session
 session_start();
 
@@ -27,9 +31,6 @@ if (empty($_SESSION['id_etudiant'])) {
 }
 
 $id_etudiant = (int) $_SESSION['id_etudiant'];
-
-// Inclure l'en-tête HTML ici
-require_once 'header.php';
 
 // Bloc try/catch
 try {
