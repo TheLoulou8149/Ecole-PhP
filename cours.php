@@ -15,17 +15,15 @@ try {
     
     // Récupération des informations utilisateur
     if ($user_type === 'etudiant') {
-        $stmt = $pdo->prepare("SELECT nom, prenom, photo FROM etudiants WHERE id_etudiant = ?");
+        $stmt = $pdo->prepare("SELECT nom, prenom FROM etudiants WHERE id_etudiant = ?");
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
         $user_name = $user_info['prenom'] . ' ' . $user_info['nom'];
-        $user_photo = $user_info['photo'] ?: 'default-avatar.jpg';
     } else if ($user_type === 'prof') {
-        $stmt = $pdo->prepare("SELECT nom, photo FROM profs WHERE id_prof = ?");
+        $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
         $user_name = 'Prof. ' . $user_info['nom'];
-        $user_photo = $user_info['photo'] ?: 'default-avatar.jpg';
     }
 
     // Récupération des cours
@@ -143,16 +141,6 @@ try {
             padding-bottom: 20px;
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-
-        .avatar {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 15px;
-            border: 3px solid var(--primary-light);
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
         }
 
         .user-name {
@@ -625,12 +613,7 @@ try {
             .search-container {
                 width: 100%;
             }
-            
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 20px;
-            }
+        
         }
     </style>
 </head>
@@ -639,7 +622,6 @@ try {
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="user-card">
-                <img src="<?php echo $user_photo; ?>" alt="Avatar" class="avatar">
                 <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
                 <div class="user-role"><?php echo ucfirst($user_type); ?></div>
             </div>

@@ -221,11 +221,7 @@
                         <h3>Pour les Étudiants</h3>
                         <p>Découvrez des cours variés, postulez facilement et accédez à un apprentissage de qualité</p>
                     </div>
-                    <div class="feature">
-                        <div class="feature-icon">🌐</div>
-                        <h3>Plateforme Moderne</h3>
-                        <p>Interface intuitive, outils collaboratifs et suivi personnalisé pour une expérience optimale</p>
-                    </div>
+                
                 </div>
             </div>
         </div>

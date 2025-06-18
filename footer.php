@@ -307,7 +307,7 @@
                         </div>
                         <div class="contact-item">
                             <span>📞</span>
-                            <span>01 23 45 67 89</span>
+                            <span>09 45 44 67 89</span>
                         </div>
                     </div>
                     
