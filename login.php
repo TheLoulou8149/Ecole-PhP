@@ -1,4 +1,6 @@
 <?php
+// Démarrer la session
+session_start();
 
 require_once 'config.php';
 require_once 'functions.php';
@@ -38,10 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Redirection selon le type d'utilisateur
                 if ($user_type === 'professeur') {
-                    header('Location: main.php');
+                    header('Location: dashboard_professeur.php');
                     exit();
                 } else {
-                    header('Location: main.php');
+                    header('Location: dashboard_etudiant.php');
                     exit();
                 }
             } else {
@@ -49,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (PDOException $e) {
             $error = "Erreur de connexion. Veuillez réessayer.";
+            // Pour le debug (à retirer en production)
+            // $error .= " Détail : " . $e->getMessage();
         }
     }
 }
@@ -180,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
         <form method="POST" action="">
