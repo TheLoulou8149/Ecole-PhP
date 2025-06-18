@@ -38,10 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Redirection selon le type d'utilisateur
                 if ($user_type === 'professeur') {
-                    header('Location: dashboard_professeur.php');
+                    header('Location: main.php');
                     exit();
                 } else {
-                    header('Location: dashboard_etudiant.php');
+                    header('Location: main.php');
                     exit();
                 }
             } else {
