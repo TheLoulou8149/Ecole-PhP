@@ -11,20 +11,7 @@ $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
 try {
-    $host = '10.96.16.82';
-$db   = 'ecole';
-$user = 'colin';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-$pdo = new PDO($dsn, $user, $pass, $options);
+    $pdo = getConnection();
     
     // Récupérer les informations de l'utilisateur
     if ($user_type === 'etudiant') {
@@ -39,6 +26,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
                 m.intitule,
                 COUNT(c.id_cours) as cours_count,
                 SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
+                SUM(TIME_TO_SEC(c.duree)/3600) as total_hours,
                 'active' as status
             FROM matieres m
             INNER JOIN cours c ON m.id_matiere = c.id_matiere
@@ -101,9 +89,6 @@ $pdo = new PDO($dsn, $user, $pass, $options);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes Matières - École</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-   
-  <?php include 'header.php'; ?>
- 
     <style>
         :root {
             --primary: #6c5ce7;
@@ -785,8 +770,5 @@ $pdo = new PDO($dsn, $user, $pass, $options);
             });
         });
     </script>
-    
-<?php include 'footer.php'; ?>
-
 </body>
 </html>

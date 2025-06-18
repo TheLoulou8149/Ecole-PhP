@@ -1,12 +1,110 @@
+<?php
+session_start();
+require_once 'config.php';
+
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'];
+
+try {
+    $host = '10.96.16.82';
+$db   = 'ecole';
+$user = 'colin';
+$pass = '';
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+$pdo = new PDO($dsn, $user, $pass, $options);
+    
+    // Récupérer les informations de l'utilisateur
+    if ($user_type === 'etudiant') {
+        $stmt = $pdo->prepare("SELECT nom, prenom, email FROM etudiants WHERE id_etudiant = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Récupérer les matières de l'étudiant
+        $query = "
+            SELECT 
+                m.id_matiere,
+                m.intitule,
+                COUNT(c.id_cours) as cours_count,
+                SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
+                'active' as status
+            FROM matieres m
+            INNER JOIN cours c ON m.id_matiere = c.id_matiere
+            INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+            WHERE ce.id_etudiant = ?
+            GROUP BY m.id_matiere, m.intitule
+            ORDER BY m.intitule
+        ";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$user_id]);
+        $matieres_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } else if ($user_type === 'prof') {
+        $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
+        $stmt->execute([$user_id]);
+        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Récupérer les matières du professeur
+        $query = "
+            SELECT 
+                m.id_matiere,
+                m.intitule,
+                COUNT(c.id_cours) as cours_count,
+                SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
+                SUM(TIME_TO_SEC(c.duree)/3600) as total_hours,
+                'active' as status
+            FROM matieres m
+            INNER JOIN cours c ON m.id_matiere = c.id_matiere
+            WHERE c.id_prof = ?
+            GROUP BY m.id_matiere, m.intitule
+            ORDER BY m.intitule
+        ";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$user_id]);
+        $matieres_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Calculer les statistiques globales
+    $total_matieres = count($matieres_data);
+    $matieres_actives = 0;
+    $matieres_completes = 0;
+    
+    foreach ($matieres_data as $matiere) {
+        if ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) {
+            $matieres_completes++;
+        } else {
+            $matieres_actives++;
+        }
+    }
+    
+} catch (PDOException $e) {
+    die("Erreur lors de la récupération des données : " . $e->getMessage());
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mes Cours - École</title>
+    <title>Mes Matières - École</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-     <?php include 'header.php'; ?>
-   <style>
+   
+  <?php include 'header.php'; ?>
+ 
+    <style>
         :root {
             --primary: #6c5ce7;
             --secondary: #a29bfe;
@@ -426,6 +524,21 @@
             color: #e17055;
         }
 
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            color: #dfe6e9;
+            margin-bottom: 20px;
+        }
+
         @keyframes shimmer {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
@@ -482,25 +595,37 @@
         <div class="header">
             <h1><i class="fas fa-book-open"></i> Mes Matières</h1>
             <div class="user-info">
-                <span><i class="fas fa-user"></i> <span id="userName">Marie Dubois</span></span>
-                <span><i class="fas fa-graduation-cap"></i> <span id="userType">Étudiante en Licence</span></span>
+                <span>
+                    <i class="fas fa-user"></i>
+                    <?php 
+                    if ($user_type === 'etudiant') {
+                        echo htmlspecialchars($user_info['prenom'] . ' ' . $user_info['nom']);
+                    } else {
+                        echo 'Prof. ' . htmlspecialchars($user_info['nom']);
+                    }
+                    ?>
+                </span>
+                <span>
+                    <i class="fas fa-<?php echo $user_type === 'etudiant' ? 'user-graduate' : 'chalkboard-teacher'; ?>"></i>
+                    <?php echo ucfirst($user_type); ?>
+                </span>
             </div>
         </div>
 
         <div class="stats-overview">
             <div class="stat-card total">
                 <div class="stat-icon"><i class="fas fa-book"></i></div>
-                <div class="stat-number total" id="totalMatieres">10</div>
+                <div class="stat-number total" id="totalMatieres"><?php echo $total_matieres; ?></div>
                 <div class="stat-label">Matières au total</div>
             </div>
             <div class="stat-card active">
                 <div class="stat-icon"><i class="fas fa-running"></i></div>
-                <div class="stat-number active" id="matieresActives">8</div>
+                <div class="stat-number active" id="matieresActives"><?php echo $matieres_actives; ?></div>
                 <div class="stat-label">Matières actives</div>
             </div>
             <div class="stat-card completed">
                 <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-number completed" id="matieresCompletes">2</div>
+                <div class="stat-number completed" id="matieresCompletes"><?php echo $matieres_completes; ?></div>
                 <div class="stat-label">Matières complétées</div>
             </div>
         </div>
@@ -518,141 +643,63 @@
         </div>
 
         <div class="matieres-grid" id="matieresGrid">
-            <!-- Les matières seront chargées ici dynamiquement -->
-        </div>
-    </div>
-
-    <script>
-        // Simulation des données de matières
-        const matieresData = [
-            {
-                id: 1,
-                intitule: "Mathématiques",
-                icon: "🧮",
-                coursCount: 3,
-                completedCours: 2,
-                totalHours: 45,
-                status: "active"
-            },
-            {
-                id: 2,
-                intitule: "Physique",
-                icon: "⚛️",
-                coursCount: 2,
-                completedCours: 1,
-                totalHours: 32,
-                status: "active"
-            },
-            {
-                id: 3,
-                intitule: "Chimie",
-                icon: "🧪",
-                coursCount: 1,
-                completedCours: 1,
-                totalHours: 28,
-                status: "completed"
-            },
-            {
-                id: 4,
-                intitule: "Informatique",
-                icon: "💻",
-                coursCount: 4,
-                completedCours: 3,
-                totalHours: 60,
-                status: "active"
-            },
-            {
-                id: 5,
-                intitule: "Littérature",
-                icon: "📚",
-                coursCount: 2,
-                completedCours: 1,
-                totalHours: 25,
-                status: "active"
-            },
-            {
-                id: 6,
-                intitule: "Histoire",
-                icon: "🏛️",
-                coursCount: 3,
-                completedCours: 2,
-                totalHours: 35,
-                status: "active"
-            },
-            {
-                id: 7,
-                intitule: "Philosophie",
-                icon: "🤔",
-                coursCount: 2,
-                completedCours: 2,
-                totalHours: 30,
-                status: "completed"
-            },
-            {
-                id: 8,
-                intitule: "Économie",
-                icon: "💰",
-                coursCount: 3,
-                completedCours: 1,
-                totalHours: 40,
-                status: "active"
-            },
-            {
-                id: 9,
-                intitule: "Biologie",
-                icon: "🧬",
-                coursCount: 2,
-                completedCours: 1,
-                totalHours: 30,
-                status: "active"
-            },
-            {
-                id: 10,
-                intitule: "Droit",
-                icon: "⚖️",
-                coursCount: 3,
-                completedCours: 2,
-                totalHours: 45,
-                status: "active"
-            }
-        ];
-
-        function loadMatieres() {
-            const grid = document.getElementById('matieresGrid');
-            grid.innerHTML = '';
-            
-            // Simuler un chargement
-            grid.innerHTML = '<div class="loading" style="grid-column:1/-1;text-align:center;padding:40px;font-size:1.2rem;color:#636e72;"><i class="fas fa-spinner fa-spin"></i> Chargement des matières...</div>';
-            
-            setTimeout(() => {
-                grid.innerHTML = '';
-                
-                matieresData.forEach(matiere => {
-                    const progress = (matiere.completedCours / matiere.coursCount) * 100;
-                    const statusClass = matiere.status === "active" ? "status-active" : "status-completed";
-                    const statusText = matiere.status === "active" ? "En cours" : "Terminée";
-                    
-                    const card = document.createElement('div');
-                    card.className = `matiere-card ${matiere.intitule.toLowerCase()}`;
-                    
-                    card.innerHTML = `
-                        <div class="status-badge ${statusClass}">${statusText}</div>
+            <?php if (empty($matieres_data)): ?>
+                <div class="no-results">
+                    <i class="fas fa-book"></i>
+                    <h3>Aucune matière trouvée</h3>
+                    <p>Vous n'avez pas encore de matières assignées.</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($matieres_data as $matiere): ?>
+                    <?php 
+                    $progress = ($matiere['cours_count'] > 0) ? ($matiere['completed_cours'] / $matiere['cours_count']) * 100 : 0;
+                    $statusClass = ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) ? 'status-completed' : 'status-active';
+                    $statusText = ($matiere['completed_cours'] == $matiere['cours_count'] && $matiere['cours_count'] > 0) ? 'Terminée' : 'En cours';
+                    $matiereClass = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $matiere['intitule']));
+                    ?>
+                    <div class="matiere-card <?php echo $matiereClass; ?>">
+                        <div class="status-badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></div>
                         <div class="matiere-header">
-                            <div class="matiere-icon">${matiere.icon}</div>
-                            <div class="matiere-title">${matiere.intitule}</div>
+                            <div class="matiere-icon">
+                                <?php 
+                                // Icônes correspondant aux matières
+                                $icons = [
+                                    'mathématique' => '🧮',
+                                    'physique' => '⚛️',
+                                    'chimie' => '🧪',
+                                    'informatique' => '💻',
+                                    'littérature' => '📚',
+                                    'histoire' => '🏛️',
+                                    'philosophie' => '🤔',
+                                    'économie' => '💰',
+                                    'biologie' => '🧬',
+                                    'droit' => '⚖️'
+                                ];
+                                
+                                $icon = '📘'; // Icône par défaut
+                                foreach ($icons as $key => $value) {
+                                    if (stripos($matiere['intitule'], $key) !== false) {
+                                        $icon = $value;
+                                        break;
+                                    }
+                                }
+                                echo $icon;
+                                ?>
+                            </div>
+                            <div class="matiere-title"><?php echo htmlspecialchars($matiere['intitule']); ?></div>
                         </div>
                         
                         <div class="matiere-stats">
                             <div class="matiere-stat">
-                                <div class="matiere-stat-number">${matiere.coursCount}</div>
+                                <div class="matiere-stat-number"><?php echo $matiere['cours_count']; ?></div>
                                 <div class="matiere-stat-label">Cours</div>
                             </div>
                             <div class="matiere-stat">
-                                <div class="matiere-stat-number">${matiere.completedCours}</div>
+                                <div class="matiere-stat-number"><?php echo $matiere['completed_cours']; ?></div>
                                 <div class="matiere-stat-label">Complétés</div>
                             </div>
                             <div class="matiere-stat">
-                                <div class="matiere-stat-number">${matiere.totalHours}h</div>
+                                <div class="matiere-stat-number"><?php echo number_format($matiere['total_hours'], 1); ?>h</div>
                                 <div class="matiere-stat-label">Total</div>
                             </div>
                         </div>
@@ -660,115 +707,86 @@
                         <div class="progress-container">
                             <div class="progress-header">
                                 <span>Progression</span>
-                                <span>${Math.round(progress)}%</span>
+                                <span><?php echo number_format($progress, 0); ?>%</span>
                             </div>
                             <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%"></div>
+                                <div class="progress-fill" style="width: <?php echo $progress; ?>%"></div>
                             </div>
                         </div>
                         
                         <div class="matiere-actions">
-                            <button class="action-btn btn-primary">
+                            <button class="action-btn btn-primary" onclick="accessMatiere(<?php echo $matiere['id_matiere']; ?>)">
                                 <i class="fas fa-play-circle"></i> Continuer
                             </button>
-                            <button class="action-btn btn-secondary">
+                            <button class="action-btn btn-secondary" onclick="showMatiereDetails(<?php echo $matiere['id_matiere']; ?>)">
                                 <i class="fas fa-info-circle"></i> Détails
                             </button>
                         </div>
-                    `;
-                    
-                    grid.appendChild(card);
-                });
-            }, 800);
-        }
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
 
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', function() {
-            loadMatieres();
-            
-            // Ajout des écouteurs d'événements pour la recherche et le filtrage
-            document.getElementById('searchInput').addEventListener('input', filterMatieres);
-            document.getElementById('filterSelect').addEventListener('change', filterMatieres);
-        });
-
+    <script>
+        // Fonction de filtrage des matières
         function filterMatieres() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const filterValue = document.getElementById('filterSelect').value;
+            const matiereCards = document.querySelectorAll('.matiere-card');
+            let visibleCount = 0;
             
-            const grid = document.getElementById('matieresGrid');
-            grid.innerHTML = '';
-            
-            const filteredMatieres = matieresData.filter(matiere => {
-                const matchesSearch = matiere.intitule.toLowerCase().includes(searchTerm);
-                const matchesFilter = filterValue === 'all' || matiere.status === filterValue;
-                return matchesSearch && matchesFilter;
+            matiereCards.forEach(card => {
+                const title = card.querySelector('.matiere-title').textContent.toLowerCase();
+                const status = card.querySelector('.status-badge').textContent.toLowerCase();
+                
+                const matchesSearch = title.includes(searchTerm);
+                const matchesFilter = filterValue === 'all' || 
+                                     (filterValue === 'active' && status.includes('en cours')) ||
+                                     (filterValue === 'completed' && status.includes('terminée'));
+                
+                if (matchesSearch && matchesFilter) {
+                    card.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
             });
             
-            if (filteredMatieres.length === 0) {
-                grid.innerHTML = `
-                    <div class="no-results" style="grid-column:1/-1; text-align:center; padding:50px;">
-                        <i class="fas fa-search" style="font-size:4rem; color:#dfe6e9; margin-bottom:20px;"></i>
-                        <h3 style="color:#636e72; margin-bottom:15px;">Aucune matière trouvée</h3>
-                        <p style="color:#b2bec3;">Essayez de modifier votre recherche ou vos filtres</p>
-                    </div>
-                `;
-                return;
+            // Afficher le message si aucun résultat
+            const noResults = document.querySelector('.no-results');
+            if (noResults) {
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
             }
-            
-            filteredMatieres.forEach(matiere => {
-                const progress = (matiere.completedCours / matiere.coursCount) * 100;
-                const statusClass = matiere.status === "active" ? "status-active" : "status-completed";
-                const statusText = matiere.status === "active" ? "En cours" : "Terminée";
-                
-                const card = document.createElement('div');
-                card.className = `matiere-card ${matiere.intitule.toLowerCase()}`;
-                
-                card.innerHTML = `
-                    <div class="status-badge ${statusClass}">${statusText}</div>
-                    <div class="matiere-header">
-                        <div class="matiere-icon">${matiere.icon}</div>
-                        <div class="matiere-title">${matiere.intitule}</div>
-                    </div>
-                    
-                    <div class="matiere-stats">
-                        <div class="matiere-stat">
-                            <div class="matiere-stat-number">${matiere.coursCount}</div>
-                            <div class="matiere-stat-label">Cours</div>
-                        </div>
-                        <div class="matiere-stat">
-                            <div class="matiere-stat-number">${matiere.completedCours}</div>
-                            <div class="matiere-stat-label">Complétés</div>
-                        </div>
-                        <div class="matiere-stat">
-                            <div class="matiere-stat-number">${matiere.totalHours}h</div>
-                            <div class="matiere-stat-label">Total</div>
-                        </div>
-                    </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-header">
-                            <span>Progression</span>
-                            <span>${Math.round(progress)}%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="matiere-actions">
-                        <button class="action-btn btn-primary">
-                            <i class="fas fa-play-circle"></i> Continuer
-                        </button>
-                        <button class="action-btn btn-secondary">
-                            <i class="fas fa-info-circle"></i> Détails
-                        </button>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
         }
+        
+        // Écouteurs d'événements
+        document.getElementById('searchInput').addEventListener('input', filterMatieres);
+        document.getElementById('filterSelect').addEventListener('change', filterMatieres);
+        
+        // Fonctions d'accès aux matières
+        function accessMatiere(matiereId) {
+            alert(`Accès à la matière ID: ${matiereId} - Cette fonctionnalité est en cours de développement`);
+            // Redirection vers la page des cours de la matière
+            // window.location.href = `cours.php?matiere=${matiereId}`;
+        }
+        
+        function showMatiereDetails(matiereId) {
+            alert(`Détails de la matière ID: ${matiereId} - Cette fonctionnalité est en cours de développement`);
+            // Afficher une modale avec les détails de la matière
+        }
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animation au chargement
+            const cards = document.querySelectorAll('.matiere-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
     </script>
-    <?php include 'footer.php'; ?>
+    
+<?php include 'footer.php'; ?>
+
 </body>
 </html>
