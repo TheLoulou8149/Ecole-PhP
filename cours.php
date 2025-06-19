@@ -36,7 +36,7 @@ try {
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
 
-} else if ($user_type === 'prof') {
+} else if ($user_type === 'professeur') {
     $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
                      m.intitule AS matiere,
                      'Vous' AS prof
