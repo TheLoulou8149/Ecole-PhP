@@ -36,18 +36,21 @@ try {
                   INNER JOIN profs p ON c.id_prof = p.id_prof
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
-    } else {
-        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme,
-                  m.intitule AS matiere, 'Vous' AS prof
-                  FROM cours c
-                  INNER JOIN matieres m ON c.id_matiere = m.id_matiere
-                  WHERE c.id_prof = ?";
-    }
 
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$user_id]);
-    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else if ($user_type === 'professeur') {
+    $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                     m.intitule AS matiere,
+                     'Vous' AS prof
+              FROM cours c
+              INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+              WHERE c.id_prof = ?";
+} else {
+    die("Type d'utilisateur non reconnu : " . $user_type);
+} // AJOUTÉ
 
+$stmt = $pdo->prepare($query); // CONSERVER UNE SEULE FOIS
+$stmt->execute([$user_id]);
+$cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Calcul des statistiques
     $totalCours = count($cours);
     $today = date('Y-m-d');
