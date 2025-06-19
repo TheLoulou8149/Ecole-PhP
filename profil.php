@@ -4,27 +4,31 @@ session_start();
 
 // Vérifier si le fichier config.php existe
 if (!file_exists('config.php')) {
-    die("Erreur : Le fichier config.php n'existe pas. Veuillez le créer avec la configuration de votre base de données.");
+    die("Erreur : Le fichier config.php est manquant.");
 }
 
 require_once 'config.php'; // Inclure le fichier de configuration
 
-// Créer la connexion en utilisant la fonction getDBConnection()
-if (function_exists('getDBConnection')) {
-    $pdo = getDBConnection();
-} else {
-    die("Erreur : La fonction getDBConnection() n'existe pas dans config.php");
+// Vérifier si la fonction getDBConnection() existe et récupérer la connexion PDO
+if (!function_exists('getDBConnection')) {
+    die("Erreur : La fonction getDBConnection() est absente du fichier config.php.");
+}
+
+$pdo = getDBConnection();
+
+// Vérifier si la connexion PDO est valide
+if (!$pdo instanceof PDO) {
+    die("Erreur : La connexion à la base de données a échoué.");
 }
 
 // Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['id_etudiant'])) {
-    // Rediriger vers la page de connexion si pas connecté
+if (empty($_SESSION['id_etudiant'])) {
     header('Location: login.php');
     exit();
 }
 
 // Récupérer l'ID de l'étudiant connecté
-$id_etudiant = $_SESSION['id_etudiant'];
+$id_etudiant = (int) $_SESSION['id_etudiant'];
 
 try {
     // Récupérer les informations de l'étudiant
