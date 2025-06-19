@@ -1,12 +1,12 @@
 <?php
 session_start();
 require_once 'config.php';
+require_once 'header.php';
 
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
     header('Location: login.php');
     exit();
 }
-
 $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
@@ -86,7 +86,6 @@ try {
     <title>Tableau de bord - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <?php include 'header.php'; ?>
 
     <style>
         * {
