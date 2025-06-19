@@ -2,6 +2,18 @@
 // Démarrage de session et inclusion du header
 require_once 'header.php';
 
+// Redirection si utilisateur non connecté
+if (empty($_SESSION['user_id']) || empty($_SESSION['user_name'])) {
+    // Stocke la page actuelle pour rediriger après login
+    $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+    
+    // Message flash
+    $_SESSION['flash_message'] = "Veuillez vous connecter pour accéder à cette page";
+    
+    header('Location: login.php');
+    exit();
+}
+
 // Récupération des informations de l'utilisateur connecté
 $welcomeName = htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur');
 $userType = $_SESSION['user_type'] ?? 'étudiant';
