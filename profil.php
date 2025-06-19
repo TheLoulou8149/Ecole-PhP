@@ -2,8 +2,27 @@
 // Démarrer la session : doit être la toute première instruction
 session_start();
 
+// DÉBOGAGE : Afficher les variables de session (à supprimer après correction)
+/*
+echo "<pre>";
+echo "Session user_type: " . (isset($_SESSION['user_type']) ? $_SESSION['user_type'] : 'NON DÉFINI') . "\n";
+echo "Session user_id: " . (isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'NON DÉFINI') . "\n";
+echo "Toutes les variables de session:\n";
+print_r($_SESSION);
+echo "</pre>";
+exit(); // Arrêter ici pour voir les variables
+*/
+
 // Vérifier si l'utilisateur est connecté AVANT d'inclure le header
-if (empty($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['etudiant', 'prof'])) {
+// Ajout de vérifications plus flexibles pour les types d'utilisateur
+if (empty($_SESSION['user_type']) || empty($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// Vérifier les types d'utilisateur possibles (plus flexible)
+$valid_user_types = ['etudiant', 'prof', 'professeur', 'teacher', 'student'];
+if (!in_array(strtolower($_SESSION['user_type']), $valid_user_types)) {
     header('Location: login.php');
     exit();
 }
@@ -23,7 +42,14 @@ if (!$pdo instanceof PDO) {
 
 // Récupérer l'ID utilisateur et le type depuis la session
 $user_id = (int) $_SESSION['user_id'];
-$user_type = $_SESSION['user_type'];
+$user_type = strtolower($_SESSION['user_type']); // Normaliser en minuscules
+
+// Normaliser le type d'utilisateur pour la logique
+if (in_array($user_type, ['professeur', 'teacher'])) {
+    $user_type = 'prof';
+} elseif (in_array($user_type, ['student'])) {
+    $user_type = 'etudiant';
+}
 
 // Variables pour l'affichage
 $user_data = [];
