@@ -4,12 +4,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Inclure la configuration de la base de données
 require_once 'config.php';
 
-// Valeurs par défaut (simulées)
-$user_name = $user_name ?? "Jean Dupont";
-$user_type = $user_type ?? "etudiant";
+// Récupération des infos utilisateur
+$user_name = $_SESSION['user_name'] ?? "Invité";
+$user_initial = strtoupper(substr(trim($user_name), 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -22,14 +21,13 @@ $user_type = $user_type ?? "etudiant";
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            color: white;
         }
 
         .container {
@@ -38,239 +36,97 @@ $user_type = $user_type ?? "etudiant";
             padding: 0 20px;
         }
 
-        /* Header */
+        /* Header redesign */
         header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 1rem 0;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 0.8rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1.5rem;
         }
 
         .logo {
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 1.8rem;
+            font-weight: 700;
             color: white;
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .nav-menu {
             display: flex;
-            gap: 2rem;
-            align-items: center;
+            gap: 1rem;
+            margin: 0 auto;
         }
 
         .nav-link {
-            color: white;
+            color: rgba(255, 255, 255, 0.9);
             text-decoration: none;
             padding: 0.5rem 1rem;
-            border-radius: 20px;
-            transition: all 0.3s ease;
+            border-radius: 8px;
+            transition: all 0.2s ease;
             font-weight: 500;
+            font-size: 0.95rem;
+            white-space: nowrap;
         }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
         }
 
         .user-info {
             display: flex;
             align-items: center;
             gap: 1rem;
-            color: white;
+            margin-left: auto;
         }
 
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 0.95rem;
         }
 
         .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             padding: 0.5rem 1rem;
             border: none;
-            border-radius: 20px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
             text-decoration: none;
-            transition: all 0.3s ease;
         }
 
         .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Main Content */
-        main {
-            padding: 3rem 0;
-        }
-
-        .welcome-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 3rem;
-            text-align: center;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .welcome-title {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .action-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-            color: white;
-        }
-
-        .action-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .action-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .action-title {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .action-description {
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: center;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            opacity: 0.9;
-            font-size: 0.9rem;
-        }
-
-        .main-cta {
-            text-align: center;
-            margin: 3rem 0;
-        }
-
-        .btn-primary {
-            background: white;
-            color: #667eea;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: #f8f9ff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Footer */
-        footer {
-            background: rgba(0, 0, 0, 0.2);
-            color: white;
-            text-align: center;
-            padding: 2rem 0;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-menu {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .welcome-title {
-                font-size: 2rem;
-            }
-
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-section {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Mobile menu toggle */
         .mobile-menu-toggle {
             display: none;
             background: none;
@@ -280,32 +136,42 @@ $user_type = $user_type ?? "etudiant";
             cursor: pointer;
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
+            .header-content {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+            
+            .logo {
+                font-size: 1.6rem;
+            }
+            
+            .nav-menu {
+                order: 3;
+                width: 100%;
+                display: none;
+                flex-direction: column;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 0.5rem;
+            }
+            
+            .nav-menu.active {
+                display: flex;
+            }
+            
             .mobile-menu-toggle {
                 display: block;
             }
-
-            .nav-menu {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(10px);
-                flex-direction: column;
-                padding: 1rem;
-                border-radius: 0 0 15px 15px;
-            }
-
-            .nav-menu.active {
-                display: flex;
+            
+            .user-info {
+                margin-left: 0;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <header>
         <div class="container">
             <div class="header-content">
@@ -320,16 +186,17 @@ $user_type = $user_type ?? "etudiant";
                 </nav>
 
                 <div class="user-info">
-                    <div class="user-avatar">
-                        <?php echo strtoupper(substr($user_name, 0, 1)); ?>
-                    </div>
-                    <span><?php echo htmlspecialchars($user_name); ?></span>
+                    <div class="user-avatar"><?php echo $user_initial; ?></div>
+                    <span class="user-name"><?php echo htmlspecialchars($user_name); ?></span>
                     <a href="logout.php" class="logout-btn">Déconnexion</a>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main>
-        <div class="container">
+    <script>
+        function toggleMobileMenu() {
+            const navMenu = document.getElementById('navMenu');
+            navMenu.classList.toggle('active');
+        }
+    </script>
