@@ -4,8 +4,8 @@ require_once 'config.php';
 
 // Vérification de la connexion
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
-    header('Location: login.php');
-    exit();
+header('Location: login.php');
+exit();
 }
 
 $user_id = $_SESSION['user_id'];
@@ -48,15 +48,15 @@ try {
     die("Type d'utilisateur non reconnu : " . $user_type);
 } // AJOUTÉ
 
-$stmt = $pdo->prepare($query); // CONSERVER UNE SEULE FOIS
+$stmt = $pdo->prepare($query);
 $stmt->execute([$user_id]);
 $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // Calcul des statistiques
-    $totalCours = count($cours);
-    $today = date('Y-m-d');
-    $coursToday = 0;
-    $coursThisWeek = 0;
-    $coursThisMonth = 0;
+// Calcul des statistiques
+$totalCours = count($cours);
+$today = date('Y-m-d');
+$coursToday = 0;
+$coursThisWeek = 0;
+$coursThisMonth = 0;
 
     $startOfWeek = date('Y-m-d', strtotime('monday this week'));
     $endOfWeek = date('Y-m-d', strtotime('sunday this week'));
@@ -70,7 +70,7 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
 } catch (PDOException $e) {
-    die("Erreur de base de données : " . $e->getMessage());
+die("Erreur de base de données : " . $e->getMessage());
 }
 
 require_once 'header.php';
@@ -148,11 +148,11 @@ require_once 'header.php';
             100% { opacity: 1; }
         }
 
-        .user-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
+.user-name {
+font-size: 1.2rem;
+font-weight: 600;
+margin-bottom: 5px;
+}
 
         .user-role {
             font-size: 0.9rem;
@@ -161,9 +161,9 @@ require_once 'header.php';
             letter-spacing: 1px;
         }
 
-        .sidebar-menu {
-            list-style: none;
-        }
+.sidebar-menu {
+list-style: none;
+}
 
         .sidebar-menu li {
             margin-bottom: 8px;
