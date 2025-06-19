@@ -24,6 +24,9 @@ try {
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
         $user_name = 'Prof. ' . $user_info['nom'];
+    } else {
+        // Gestion des types d'utilisateurs inconnus
+        die("Type d'utilisateur non reconnu");
     }
 
     // Récupération des cours
@@ -35,18 +38,23 @@ try {
                   INNER JOIN profs p ON c.id_prof = p.id_prof
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
- } else if ($user_type === 'prof') {
-    $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                     m.intitule AS matiere,
-                     'Vous' AS prof  // Colonne ajoutée ici
-              FROM cours c
-              INNER JOIN matieres m ON c.id_matiere = m.id_matiere
-              WHERE c.id_prof = ?";
-}
+    } else if ($user_type === 'prof') {
+        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                         m.intitule AS matiere,
+                         'Vous' AS prof
+                  FROM cours c
+                  INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+                  WHERE c.id_prof = ?";
+    } else {
+        // Requête vide pour types inconnus
+        $query = "SELECT NULL LIMIT 0";
+    }
 
     $stmt = $pdo->prepare($query);
-$stmt->execute([$user_id]);
-$cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->execute([$user_id]);
+    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ... le reste du code inchangé ...
     // Calcul des statistiques
     $totalCours = count($cours);
     $today = date('Y-m-d');
