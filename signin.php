@@ -26,8 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Obtenir la connexion à la base de données
             $pdo = getDBConnection();
             
-            // Déterminer la table selon le type d'utilisateur (cohérent avec login.php)
-            $table = ($user_type == 'professeur') ? 'professeurs' : 'etudiants';
+            // Déterminer la table selon le type d'utilisateur
+            $table = ($user_type == 'professeur') ? 'profs' : 'etudiants';
             
             // Vérifier si l'email existe déjà
             $sql_check = "SELECT * FROM $table WHERE email = :email";
@@ -39,12 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $error = 'Cet email est déjà utilisé.';
             } else {
                 // Insérer le nouvel utilisateur (mot de passe en clair pour être cohérent avec login.php)
-                // Adapter les colonnes selon votre structure de base de données
-                if ($user_type == 'professeur') {
-                    $sql_insert = "INSERT INTO professeurs (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
-                } else {
-                    $sql_insert = "INSERT INTO etudiants (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
-                }
+                // Requête générique qui s'adapte à la table déterminée ci-dessus
+                $sql_insert = "INSERT INTO $table (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
                 
                 $stmt_insert = $pdo->prepare($sql_insert);
                 $stmt_insert->bindParam(':nom', $nom);
