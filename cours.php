@@ -180,22 +180,7 @@ try {
             gap: 20px;
         }
 
-        .header {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    
 
         .date-display {
             font-size: 1rem;
