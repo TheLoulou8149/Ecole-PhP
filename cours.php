@@ -1,25 +1,26 @@
 <?php
 session_start();
 require_once 'config.php';
-require_once 'header.php';
 
+// Vérification de la connexion
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
     header('Location: login.php');
     exit();
 }
+
 $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
+// Récupération des informations utilisateur
 try {
     $pdo = getDBConnection();
-    
-    // Récupération des informations utilisateur
+
     if ($user_type === 'etudiant') {
         $stmt = $pdo->prepare("SELECT nom, prenom FROM etudiants WHERE id_etudiant = ?");
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
         $user_name = $user_info['prenom'] . ' ' . $user_info['nom'];
-    } else if ($user_type === 'prof') {
+    } elseif ($user_type === 'prof') {
         $stmt = $pdo->prepare("SELECT nom FROM profs WHERE id_prof = ?");
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -29,7 +30,7 @@ try {
     // Récupération des cours
     if ($user_type === 'etudiant') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere, p.nom AS prof
+                  m.intitule AS matiere, p.nom AS prof
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
                   INNER JOIN profs p ON c.id_prof = p.id_prof
@@ -57,27 +58,22 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $coursThisWeek = 0;
     $coursThisMonth = 0;
 
-    // Dates pour la semaine en cours
     $startOfWeek = date('Y-m-d', strtotime('monday this week'));
     $endOfWeek = date('Y-m-d', strtotime('sunday this week'));
     $startOfMonth = date('Y-m-01');
     $endOfMonth = date('Y-m-t');
 
     foreach ($cours as $c) {
-        if ($c['date'] == $today) {
-            $coursToday++;
-        }
-        if ($c['date'] >= $startOfWeek && $c['date'] <= $endOfWeek) {
-            $coursThisWeek++;
-        }
-        if ($c['date'] >= $startOfMonth && $c['date'] <= $endOfMonth) {
-            $coursThisMonth++;
-        }
+        if ($c['date'] == $today) $coursToday++;
+        if ($c['date'] >= $startOfWeek && $c['date'] <= $endOfWeek) $coursThisWeek++;
+        if ($c['date'] >= $startOfMonth && $c['date'] <= $endOfMonth) $coursThisMonth++;
     }
 
 } catch (PDOException $e) {
     die("Erreur de base de données : " . $e->getMessage());
 }
+
+require_once 'header.php';
 ?>
 
 <!DOCTYPE html>
@@ -85,10 +81,9 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - École</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <br>
-
+    <title>Mes Cours - École</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -97,11 +92,10 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
-            line-height: 1.6;
         }
 
         .container-cours {
@@ -109,22 +103,49 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
             margin: 0 auto;
             display: grid;
             grid-template-columns: 280px 1fr;
-            gap: 20px;
+            gap: 25px;
+            padding: 25px;
+            min-height: 100vh;
         }
 
-        /* Sidebar */
+        /* Sidebar Styles */
         .sidebar {
-            background: white;
-            border-radius: 8px;
-            padding: 20px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 25px;
             height: fit-content;
+            position: sticky;
+            top: 25px;
         }
 
         .user-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            padding: 25px;
             text-align: center;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            margin-bottom: 25px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #667eea, #764ba2, #667eea);
+            border-radius: 17px;
+            z-index: -1;
+            animation: borderGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         .user-name {
@@ -134,12 +155,10 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         .user-role {
-            display: inline-block;
-            background: #4361ee;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .sidebar-menu {
@@ -147,86 +166,131 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         .sidebar-menu li {
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .sidebar-menu a {
             display: flex;
             align-items: center;
-            padding: 10px 12px;
-            border-radius: 6px;
-            color: #555;
+            padding: 15px 20px;
             text-decoration: none;
+            color: white;
+            border-radius: 12px;
+            transition: all 0.3s ease;
             font-weight: 500;
         }
 
-        .sidebar-menu a:hover, .sidebar-menu a.active {
-            background: #f0f3ff;
-            color: #4361ee;
+        .sidebar-menu a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
         }
 
-        .sidebar-menu i {
-            margin-right: 8px;
-            font-size: 1rem;
+        .sidebar-menu a.active {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-menu a i {
+            margin-right: 12px;
             width: 20px;
             text-align: center;
         }
 
-        /* Main content */
+        /* Main Content */
         .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
         }
 
-        .header {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
+        .header-dashboard {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
         }
 
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
+        .header-dashboard h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
         }
 
         .date-display {
-            font-size: 1rem;
-            color: #666;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
 
-        /* Stats */
+        /* Statistics Cards */
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
         .stat-card {
             background: white;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
 
         .stat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -234,306 +298,437 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
             color: white;
         }
 
-        .icon-total { background: #4361ee; }
-        .icon-week { background: #4cc9f0; }
-        .icon-today { background: #f72585; }
-        .icon-month { background: #f8961e; }
-
-        .stat-title {
-            font-size: 0.9rem;
-            color: #666;
-        }
+        .icon-total { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .icon-week { background: linear-gradient(135deg, #10b981, #059669); }
+        .icon-today { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .icon-month { background: linear-gradient(135deg, #ef4444, #dc2626); }
 
         .stat-value {
-            font-size: 1.8rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            margin: 5px 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        /* Content area */
-        .content-area {
+        /* Course Views */
+        .view-container {
             background: white;
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
         }
 
-        .content-header {
+        .view-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
         }
 
-        .content-header h2 {
-            font-size: 1.3rem;
+        .view-header h2 {
+            font-size: 1.5rem;
             font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .view-toggle {
             display: flex;
-            background: #f0f3ff;
-            border-radius: 8px;
+            background: #f1f5f9;
             padding: 4px;
+            border-radius: 12px;
         }
 
-        .toggle-btn {
-            padding: 6px 15px;
+        .view-toggle button {
+            padding: 10px 20px;
             border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.85rem;
             background: transparent;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .toggle-btn.active {
-            background: #4361ee;
-            color: white;
-        }
-
-        .search-container {
-            position: relative;
-            width: 250px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 35px;
-            border: none;
             border-radius: 8px;
-            font-size: 0.9rem;
-            background: #f0f3ff;
-            font-family: inherit;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #666;
-        }
-
-        /* Calendar */
-        .calendar-view {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: #f0f3ff;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .calendar-header {
-            background: #4361ee;
-            color: white;
-            padding: 12px 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.8rem;
-        }
-
-        .calendar-day {
-            background: white;
-            min-height: 120px;
-            padding: 12px 8px;
-            position: relative;
-        }
-
-        .day-number {
-            font-weight: 700;
-            margin-bottom: 8px;
-            font-size: 1rem;
-        }
-
-        .today .day-number {
-            display: inline-block;
-            background: #4361ee;
-            color: white;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 26px;
-        }
-
-        .course-item {
-            color: white;
-            padding: 5px 6px;
-            margin: 3px 0;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 500;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            background: #4361ee;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
 
-        /* List view */
-        .list-view {
-            display: none;
-            grid-template-columns: 1fr;
+        .view-toggle button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Course List */
+        .course-list {
+            display: grid;
             gap: 15px;
         }
 
-        .no-course {
-            text-align: center;
+        .course-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+            border-radius: 12px;
             padding: 20px;
-            color: #666;
-            font-style: italic;
+            border-left: 4px solid transparent;
+            background-clip: padding-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            position: relative;
+            color: white;
         }
 
-        .course-card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
-            border-left: 4px solid #4361ee;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .course-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            border-radius: 2px 0 0 2px;
+        }
+
+        .course-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
         .course-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            margin-bottom: 10px;
         }
 
         .course-title {
             font-size: 1.1rem;
             font-weight: 600;
+            color: white;
+            margin-bottom: 5px;
         }
 
         .course-subject {
-            background: #4361ee;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 16px;
+            color: #e2e8f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .course-date {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .course-details {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+        }
+
+        .course-platform {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .course-prof {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+            display: none;
+        }
+
+        .calendar-container.active {
+            display: block;
+        }
+
+        .calendar {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .calendar-nav button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-nav button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .calendar-month {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-day-header {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
             font-weight: 500;
         }
 
-        .course-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
+        .calendar-day:hover {
+            background: #f8fafc;
+            transform: scale(1.05);
         }
 
-        .meta-item {
+        .calendar-day.other-month {
+            color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .calendar-day.today {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 700;
+        }
+
+        .calendar-day.has-course {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-day.has-course::after {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+        }
+
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .calendar-events {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #f1f5f9;
+        }
+
+        .calendar-events h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .calendar-event {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-event:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .calendar-event-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .calendar-event-details {
+            font-size: 0.9rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .calendar-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
             font-size: 0.9rem;
-            color: #666;
+            color: #64748b;
         }
 
-        .meta-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: rgba(67, 97, 238, 0.1);
-            color: #4361ee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
         }
 
-        .course-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 8px;
+        .legend-today .legend-color {
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        .action-btn {
-            flex: 1;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            font-family: inherit;
+        .legend-course .legend-color {
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
-        .btn-primary {
-            background: #4361ee;
-            color: white;
+        .legend-selected .legend-color {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
-        .btn-outline {
-            background: transparent;
-            color: #4361ee;
-            border: 1px solid #4361ee;
-        }
-
-        /* Floating button */
-        .floating-add {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: #f72585;
-            border: none;
-            border-radius: 50%;
-            color: white;
-            font-size: 1.3rem;
-            cursor: pointer;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .container {
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .container-cours {
                 grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
             }
-            
+
             .sidebar {
-                display: none;
+                position: relative;
+                top: 0;
+            }
+
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .header-dashboard {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header-dashboard h1 {
+                font-size: 1.8rem;
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 640px) {
             .stats {
                 grid-template-columns: 1fr;
             }
-            
-            .calendar-view {
-                grid-template-columns: 1fr;
+
+            .course-header {
+                flex-direction: column;
+                gap: 10px;
             }
-            
-            .search-container {
-                width: 100%;
+
+            .course-details {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
             }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Smooth transitions */
+        * {
+            scroll-behavior: smooth;
         }
     </style>
 </head>
 <body>
     <div class="container-cours">
-        <!-- Sidebar simplifiée -->
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="user-card">
                 <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
                 <div class="user-role"><?php echo ucfirst($user_type); ?></div>
             </div>
-            
+
             <ul class="sidebar-menu">
                 <li><a href="#" class="active"><i class="fas fa-home"></i> Tableau de bord</a></li>
                 <li><a href="#" id="sidebarCalendar"><i class="fas fa-calendar-alt"></i> Calendrier</a></li>
@@ -541,14 +736,17 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
             </ul>
         </div>
-        
+
         <!-- Main Content -->
         <div class="main-content">
             <div class="header-dashboard">
-                <h1><i class="fas fa-graduation-cap"></i> Tableau de bord</h1>
-                <div class="date-display"><?php echo date('l j F Y'); ?></div>
+                <h1><i class="fas fa-graduation-cap"></i> Mes Cours</h1>
+                <div class="date-display"><?php 
+                    setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'french');
+                    echo date('l j F Y'); 
+                ?></div>
             </div>
-            
+
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-header">
@@ -557,7 +755,7 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="stat-value"><?php echo $totalCours; ?></div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-header">
                         <div class="stat-title">Cette semaine</div>
@@ -565,7 +763,7 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="stat-value"><?php echo $coursThisWeek; ?></div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-header">
                         <div class="stat-title">Aujourd'hui</div>
@@ -573,7 +771,7 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="stat-value"><?php echo $coursToday; ?></div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-header">
                         <div class="stat-title">Ce mois</div>
@@ -582,253 +780,94 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="stat-value"><?php echo $coursThisMonth; ?></div>
                 </div>
             </div>
-            
-            <div class="content-area">
-                <div class="content-header">
-                    <h2>Mes cours</h2>
-                    <div style="display: flex; gap: 15px;">
-                        <div class="view-toggle">
-                            <button class="toggle-btn active" id="calendarBtn">
-                                <i class="fas fa-calendar-alt"></i> Calendrier
-                            </button>
-                            <button class="toggle-btn" id="listBtn">
-                                <i class="fas fa-list"></i> Liste
-                            </button>
-                        </div>
-                        
-                        <div class="search-container">
-                            <input type="text" class="search-input" placeholder="Rechercher un cours..." id="searchInput">
-                            <i class="fas fa-search search-icon"></i>
-                        </div>
+
+            <!-- Course List View -->
+            <div class="view-container">
+                <div class="view-header">
+                    <h2><i class="fas fa-list"></i> Liste des cours</h2>
+                    <div class="view-toggle">
+                        <button class="active" id="listView"><i class="fas fa-list"></i> Liste</button>
+                        <button id="calendarView"><i class="fas fa-calendar"></i> Calendrier</button>
                     </div>
                 </div>
-                
-                <div id="calendarView" class="calendar-view">
-                    <div class="calendar-header">Lundi</div>
-                    <div class="calendar-header">Mardi</div>
-                    <div class="calendar-header">Mercredi</div>
-                    <div class="calendar-header">Jeudi</div>
-                    <div class="calendar-header">Vendredi</div>
-                    <div class="calendar-header">Samedi</div>
-                    <div class="calendar-header">Dimanche</div>
-                    <!-- Les jours seront ajoutés dynamiquement par JavaScript -->
+
+                <!-- Liste des cours -->
+                <div class="course-list" id="courseList">
+                    <?php if (empty($cours)): ?>
+                        <div style="text-align: center; padding: 50px; color: #64748b;">
+                            <i class="fas fa-book-open" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.3;"></i>
+                            <p>Aucun cours trouvé</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($cours as $c): ?>
+                            <div class="course-item">
+                                <div class="course-header">
+                                    <div>
+                                        <div class="course-title"><?php echo htmlspecialchars($c['intitule']); ?></div>
+                                        <div class="course-subject"><?php echo htmlspecialchars($c['matiere']); ?></div>
+                                    </div>
+                                    <div class="course-date">
+                                        <i class="fas fa-calendar-day"></i>
+                                        <?php echo date('d/m/Y', strtotime($c['date'])); ?>
+                                    </div>
+                                </div>
+                                <div class="course-details">
+                                    <div class="course-platform">
+                                        <i class="fas fa-desktop"></i>
+                                        <?php echo htmlspecialchars($c['plateforme']); ?>
+                                    </div>
+                                    <div class="course-prof">
+                                        <i class="fas fa-user-tie"></i>
+                                        <?php echo htmlspecialchars($c['prof']); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
-                
-                <div id="listView" class="list-view">
-                    <!-- Les cours seront chargés ici dynamiquement -->
+
+                <!-- Vue Calendrier -->
+                <div class="calendar-container" id="calendarContainer">
+                    <div class="calendar">
+                        <div class="calendar-header">
+                            <div class="calendar-nav">
+                                <button id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+                                <div class="calendar-month" id="currentMonth"></div>
+                                <button id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="calendar-legend">
+                                <div class="legend-item legend-today">
+                                    <div class="legend-color"></div>
+                                    <span>Aujourd'hui</span>
+                                </div>
+                                <div class="legend-item legend-course">
+                                    <div class="legend-color"></div>
+                                    <span>Cours</span>
+                                </div>
+                                <div class="legend-item legend-selected">
+                                    <div class="legend-color"></div>
+                                    <span>Sélectionné</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="calendar-grid" id="calendarGrid">
+                            <!-- Le calendrier sera généré par JavaScript -->
+                        </div>
+
+                        <div class="calendar-events" id="calendarEvents">
+                            <h3><i class="fas fa-calendar-check"></i> Cours du jour sélectionné</h3>
+                            <div id="selectedDayEvents">
+                                <p style="color: #64748b; font-style: italic;">Cliquez sur une date pour voir les cours</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <button class="floating-add" onclick="addNewCourse()">
-        <i class="fas fa-plus"></i>
-    </button>
-    
-    <script>
-        // Données des cours
-        const coursData = <?php echo json_encode($cours); ?>;
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
+    </div
 
-        function initializeCalendar() {
-            const calendarView = document.getElementById('calendarView');
-            // Conserver les en-têtes
-            const headers = calendarView.querySelectorAll('.calendar-header');
-            calendarView.innerHTML = '';
-            headers.forEach(header => calendarView.appendChild(header));
 
-            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
-            // Ajouter les jours vides du début
-            const startOffset = firstDay === 0 ? 6 : firstDay - 1;
-            for (let i = 0; i < startOffset; i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'calendar-day';
-                calendarView.appendChild(emptyDay);
-            }
-            
-            // Ajouter les jours du mois
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day';
-                
-                // Marquer aujourd'hui
-                if (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    dayDiv.classList.add('today');
-                }
-                
-                const dayNumber = document.createElement('div');
-                dayNumber.className = 'day-number';
-                dayNumber.textContent = day;
-                dayDiv.appendChild(dayNumber);
-                
-                // Vérifier s'il y a des cours ce jour-là
-                const currentDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const coursThisDay = coursData.filter(cours => cours.date === currentDate);
-                
-                coursThisDay.forEach(cours => {
-                    const courseDiv = document.createElement('div');
-                    courseDiv.className = 'course-item';
-                    courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 15)}`;
-                    
-                    // Adaptation pour les professeurs
-                    const profName = cours.prof ? cours.prof : "Vous";
-                    courseDiv.title = `${cours.intitule} - ${profName}`;
-                    
-                    courseDiv.onclick = () => showCourseDetails(cours.id_cours);
-                    dayDiv.appendChild(courseDiv);
-                });
-                
-                calendarView.appendChild(dayDiv);
-            }
-        }
-
-        function loadCoursList() {
-            const listView = document.getElementById('listView');
-            listView.innerHTML = '';
-
-            // Message si aucun cours
-            if (coursData.length === 0) {
-                listView.innerHTML = '<div class="no-course">Aucun cours disponible</div>';
-                return;
-            }
-            
-            coursData.forEach((cours, index) => {
-                const courseCard = document.createElement('div');
-                courseCard.className = `course-card`;
-                
-                // Adaptation pour les professeurs
-                const profName = cours.prof ? cours.prof : "Vous";
-                
-                courseCard.innerHTML = `
-                    <div class="course-header">
-                        <div class="course-title">${cours.intitule}</div>
-                        <div class="course-subject">${cours.matiere}</div>
-                    </div>
-                    
-                    <div class="course-meta">
-                        <div class="meta-item">
-                            <div class="meta-icon"><i class="fas fa-calendar"></i></div>
-                            <div>${formatDate(cours.date)}</div>
-                        </div>
-                        <div class="meta-item">
-                            <div class="meta-icon"><i class="fas fa-user-tie"></i></div>
-                            <div>${profName}</div>
-                        </div>
-                        <div class="meta-item">
-                            <div class="meta-icon"><i class="fas fa-laptop"></i></div>
-                            <div>${cours.plateforme}</div>
-                        </div>
-                        <div class="meta-item">
-                            <div class="meta-icon"><i class="fas fa-clock"></i></div>
-                            <div>${getRandomTime()}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="course-actions">
-                        <button class="action-btn btn-primary" onclick="accessCourse(${cours.id_cours})">
-                            <i class="fas fa-play"></i> Accéder
-                        </button>
-                        <button class="action-btn btn-outline" onclick="showCourseDetails(${cours.id_cours})">
-                            <i class="fas fa-info-circle"></i> Détails
-                        </button>
-                    </div>
-                `;
-                
-                listView.appendChild(courseCard);
-            });
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-        }
-        
-        function getRandomTime() {
-            const hours = Math.floor(Math.random() * 4) + 9;
-            const minutes = Math.random() > 0.5 ? '00' : '30';
-            return `${hours}:${minutes}`;
-        }
-
-        function showCalendar() {
-            document.getElementById('calendarView').style.display = 'grid';
-            document.getElementById('listView').style.display = 'none';
-            document.getElementById('calendarBtn').classList.add('active');
-            document.getElementById('listBtn').classList.remove('active');
-        }
-
-        function showList() {
-            document.getElementById('calendarView').style.display = 'none';
-            document.getElementById('listView').style.display = 'grid';
-            document.getElementById('calendarBtn').classList.remove('active');
-            document.getElementById('listBtn').classList.add('active');
-        }
-
-        function addNewCourse() {
-            alert('Fonctionnalité d\'ajout de cours à implémenter');
-        }
-        
-        function accessCourse(courseId) {
-            alert(`Accès au cours ID: ${courseId} - Cette fonctionnalité est en cours de développement`);
-        }
-        
-        function showCourseDetails(courseId) {
-            const course = coursData.find(c => c.id_cours == courseId);
-            if (course) {
-                // Adaptation pour les professeurs
-                const profName = course.prof ? course.prof : "Vous";
-                alert(`Détails du cours:\n\nTitre: ${course.intitule}\nMatière: ${course.matiere}\nDate: ${formatDate(course.date)}\nProfesseur: ${profName}\nPlateforme: ${course.plateforme}`);
-            }
-        }
-
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCalendar();
-            loadCoursList();
-            
-            // Écouteurs d'événements pour les boutons
-            document.getElementById('calendarBtn').addEventListener('click', showCalendar);
-            document.getElementById('listBtn').addEventListener('click', showList);
-            
-            // Écouteurs pour la sidebar
-            document.getElementById('sidebarCalendar').addEventListener('click', function(e) {
-                e.preventDefault();
-                showCalendar();
-            });
-            
-            document.getElementById('sidebarList').addEventListener('click', function(e) {
-                e.preventDefault();
-                showList();
-            });
-            
-            // Recherche de cours
-            document.getElementById('searchInput').addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                const courseCards = document.querySelectorAll('.course-card');
-                
-                courseCards.forEach(card => {
-                    const title = card.querySelector('.course-title').textContent.toLowerCase();
-                    const subject = card.querySelector('.course-subject').textContent.toLowerCase();
-                    
-                    if (title.includes(searchTerm) || subject.includes(searchTerm)) {
-                        card.style.display = 'flex';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
-        });
-    </script>
-    <br>
-    <?php include 'footer.php'; ?>
-
-</body>
-</html>
+<?php
+    require_once 'footer.php';
+?>
