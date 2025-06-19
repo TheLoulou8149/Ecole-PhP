@@ -1,23 +1,17 @@
 <?php
-
-// Inclure l'en-tête HTML ici
-require_once 'header.php';
-
-// Démarrer la session
+// Démarrer la session (doit être tout en haut du fichier, avant tout affichage)
 session_start();
 
 // Vérifier si le fichier config.php existe
 if (!file_exists('config.php')) {
     die("Erreur : Le fichier config.php est manquant.");
 }
-
 require_once 'config.php';
 
 // Vérifier si la fonction getDBConnection() existe
 if (!function_exists('getDBConnection')) {
     die("Erreur : La fonction getDBConnection() est absente du fichier config.php.");
 }
-
 $pdo = getDBConnection();
 
 if (!$pdo instanceof PDO) {
@@ -31,6 +25,9 @@ if (empty($_SESSION['id_etudiant'])) {
 }
 
 $id_etudiant = (int) $_SESSION['id_etudiant'];
+
+// Inclure l'en-tête HTML (uniquement après tout traitement sensible aux headers)
+require_once 'header.php';
 
 // Bloc try/catch
 try {
@@ -60,6 +57,7 @@ try {
     die("Erreur : " . $e->getMessage());
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="fr">
