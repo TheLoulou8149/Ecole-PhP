@@ -2,8 +2,8 @@
 // Démarrer la session : doit être la toute première instruction
 session_start();
 
-// Vérifier si l'utilisateur est connecté avant tout affichage
-if (empty($_SESSION['user_type']) || $_SESSION['user_type'] !== 'etudiant') {
+// Vérifier si l'utilisateur est connecté (étudiant OU professeur)
+if (empty($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['etudiant', 'prof'])) {
     header('Location: login.php');
     exit();
 }
@@ -21,48 +21,93 @@ if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Récupérer l'ID étudiant depuis la session
-$id_etudiant = (int) $_SESSION['user_id']; // on utilise ici la clé correcte définie dans login.php
+// Récupérer l'ID utilisateur et le type depuis la session
+$user_id = (int) $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'];
 
-// Inclure l'en-tête (seulement après toutes les redirections et session_start)
-require_once 'header.php';
+// Variables pour l'affichage
+$user_data = [];
+$cours = [];
 
 // Bloc try/catch
 try {
-    // Vérifier que l'étudiant existe
-    $stmt = $pdo->prepare("SELECT * FROM etudiants WHERE id_etudiant = ?");
-    $stmt->execute([$id_etudiant]);
-    $etudiant = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($user_type === 'etudiant') {
+        // Logique pour les étudiants
+        $stmt = $pdo->prepare("SELECT * FROM etudiants WHERE id_etudiant = ?");
+        $stmt->execute([$user_id]);
+        $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$etudiant) {
-        die("Étudiant non trouvé pour l'ID: $id_etudiant");
+        if (!$user_data) {
+            die("Étudiant non trouvé pour l'ID: $user_id");
+        }
+
+        // Récupérer les cours de l'étudiant
+        $stmt = $pdo->prepare("
+            SELECT c.*, m.intitule AS matiere_nom, p.nom AS prof_nom
+            FROM cours c
+            INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+            INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+            INNER JOIN profs p ON c.id_prof = p.id_prof
+            WHERE ce.id_etudiant = ?
+            ORDER BY c.date DESC
+        ");
+        $stmt->execute([$user_id]);
+        $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } elseif ($user_type === 'prof') {
+        // Logique pour les professeurs
+        $stmt = $pdo->prepare("SELECT * FROM profs WHERE id_prof = ?");
+        $stmt->execute([$user_id]);
+        $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user_data) {
+            die("Professeur non trouvé pour l'ID: $user_id");
+        }
+
+        // Récupérer les cours du professeur
+        $stmt = $pdo->prepare("
+            SELECT c.*, m.intitule AS matiere_nom, 
+                   COUNT(ce.id_etudiant) as nombre_etudiants
+            FROM cours c
+            INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+            LEFT JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
+            WHERE c.id_prof = ?
+            GROUP BY c.id_cours
+            ORDER BY c.date DESC
+        ");
+        $stmt->execute([$user_id]);
+        $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    // Récupérer les cours
-    $stmt = $pdo->prepare("
-        SELECT c.*, m.intitule AS matiere_nom, p.nom AS prof_nom
-        FROM cours c
-        INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
-        INNER JOIN matieres m ON c.id_matiere = m.id_matiere
-        INNER JOIN profs p ON c.id_prof = p.id_prof
-        WHERE ce.id_etudiant = ?
-        ORDER BY c.date DESC
-    ");
-    $stmt->execute([$id_etudiant]);
-    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     die("Erreur : " . $e->getMessage());
 }
+
+// Fonction pour obtenir le nom complet selon le type d'utilisateur
+function getFullName($user_data, $user_type) {
+    if ($user_type === 'etudiant') {
+        return $user_data['prenom'] . ' ' . $user_data['nom'];
+    } else {
+        return $user_data['nom']; // Les profs ont généralement juste un nom
+    }
+}
+
+// Fonction pour obtenir les initiales
+function getInitials($user_data, $user_type) {
+    if ($user_type === 'etudiant') {
+        return strtoupper(substr($user_data['prenom'], 0, 1) . substr($user_data['nom'], 0, 1));
+    } else {
+        $nom_parts = explode(' ', $user_data['nom']);
+        if (count($nom_parts) >= 2) {
+            return strtoupper(substr($nom_parts[0], 0, 1) . substr($nom_parts[1], 0, 1));
+        } else {
+            return strtoupper(substr($user_data['nom'], 0, 2));
+        }
+    }
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Profil - <?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?></title>
-    <style>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -73,6 +118,11 @@ try {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #8b5cf6 100%);
             min-height: 100vh;
+            padding-top: 0; /* Suppression du padding pour utiliser le header existant */
+        }
+
+        /* Ajustement pour le header existant */
+        .main-content {
             padding: 20px;
         }
 
@@ -117,6 +167,19 @@ try {
             font-size: 1.2rem;
             opacity: 0.9;
             font-weight: 400;
+        }
+
+        .user-type-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
         }
 
         .profile-grid {
@@ -305,30 +368,9 @@ try {
             font-weight: 500;
         }
 
-        .logout-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
         @media (max-width: 768px) {
-            .container {
-                padding: 0 10px;
+            .main-content {
+                padding: 10px;
             }
             
             .welcome-section {
@@ -352,146 +394,179 @@ try {
             .courses-grid {
                 grid-template-columns: 1fr;
             }
-
-            .logout-btn {
-                position: static;
-                display: block;
-                width: 100%;
-                margin-bottom: 20px;
-                text-align: center;
-            }
         }
     </style>
-</head>
-<body>
-    <a href="logout.php" class="logout-btn">Déconnexion</a>
-    
-    <div class="container">
-        <!-- Section de bienvenue -->
-        <div class="welcome-section">
-            <div class="profile-avatar">
-                <?php echo strtoupper(substr($etudiant['prenom'], 0, 1) . substr($etudiant['nom'], 0, 1)); ?>
-            </div>
-            <h1 class="welcome-title">Bienvenue, <?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?>!</h1>
-            <p class="welcome-subtitle">Consultez vos informations personnelles et suivez vos cours</p>
-        </div>
 
-        <!-- Grille des informations profil -->
-        <div class="profile-grid">
-            <!-- Carte Informations personnelles -->
-            <div class="profile-card">
-                <div class="card-icon">👤</div>
-                <h3 class="card-title">Informations personnelles</h3>
-                <div class="info-item">
-                    <span class="info-label">Nom complet</span>
-                    <span class="info-value"><?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?></span>
+    <!-- Contenu principal -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Section de bienvenue -->
+            <div class="welcome-section">
+                <div class="profile-avatar">
+                    <?php echo getInitials($user_data, $user_type); ?>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Email</span>
-                    <span class="info-value"><?php echo htmlspecialchars($etudiant['email']); ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Date de naissance</span>
-                    <span class="info-value">
-                        <?php 
-                        if (!empty($etudiant['date_naissance'])) {
-                            $date = new DateTime($etudiant['date_naissance']);
-                            echo $date->format('d/m/Y');
-                        } else {
-                            echo 'Non renseignée';
-                        }
-                        ?>
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Âge</span>
-                    <span class="info-value">
-                        <?php 
-                        if (!empty($etudiant['date_naissance'])) {
-                            $naissance = new DateTime($etudiant['date_naissance']);
-                            $aujourd_hui = new DateTime();
-                            $age = $aujourd_hui->diff($naissance)->y;
-                            echo $age . ' ans';
-                        } else {
-                            echo 'Non calculé';
-                        }
-                        ?>
-                    </span>
-                </div>
+                <h1 class="welcome-title">Bienvenue, <?php echo htmlspecialchars(getFullName($user_data, $user_type)); ?>!</h1>
+                <p class="welcome-subtitle">
+                    <?php if ($user_type === 'etudiant'): ?>
+                        Consultez vos informations personnelles et suivez vos cours
+                    <?php else: ?>
+                        Gérez vos cours et consultez vos informations
+                    <?php endif; ?>
+                </p>
+                <span class="user-type-badge">
+                    <?php echo $user_type === 'etudiant' ? 'Étudiant' : 'Professeur'; ?>
+                </span>
             </div>
 
-            <!-- Carte Statistiques -->
-            <div class="profile-card">
-                <div class="card-icon">📊</div>
-                <h3 class="card-title">Mes statistiques</h3>
-                <div class="info-item">
-                    <span class="info-label">Nombre de cours</span>
-                    <span class="info-value"><?php echo count($cours); ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">ID Étudiant</span>
-                    <span class="info-value">#<?php echo htmlspecialchars($etudiant['id_etudiant']); ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Statut</span>
-                    <span class="info-value">Actif</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Dernière connexion</span>
-                    <span class="info-value">Aujourd'hui</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section des cours -->
-        <div class="courses-section">
-            <div class="section-header">
-                <div class="section-icon">📚</div>
-                <h2 class="section-title">Mes Cours (<?php echo count($cours); ?>)</h2>
-            </div>
-            
-            <?php if (empty($cours)): ?>
-                <div class="no-courses">
-                    <div class="no-courses-icon">📭</div>
-                    <p class="no-courses-text">Aucun cours inscrit pour le moment.</p>
-                </div>
-            <?php else: ?>
-                <div class="courses-grid">
-                    <?php foreach ($cours as $c): ?>
-                        <div class="course-card">
-                            <div class="course-header">
-                                <h4 class="course-title"><?php echo htmlspecialchars($c['intitule']); ?></h4>
-                                <span class="platform-badge"><?php echo htmlspecialchars($c['plateforme']); ?></span>
-                            </div>
-                            <div class="course-details">
-                                <div class="course-detail">
-                                    <span class="course-detail-label">Matière</span>
-                                    <span class="course-detail-value"><?php echo htmlspecialchars($c['matiere_nom']); ?></span>
-                                </div>
-                                <div class="course-detail">
-                                    <span class="course-detail-label">Professeur</span>
-                                    <span class="course-detail-value"><?php echo htmlspecialchars($c['prof_nom']); ?></span>
-                                </div>
-                                <div class="course-detail">
-                                    <span class="course-detail-label">Date</span>
-                                    <span class="course-detail-value">
-                                        <?php 
-                                        $date = new DateTime($c['date']);
-                                        echo $date->format('d/m/Y');
-                                        ?>
-                                    </span>
-                                </div>
-                            </div>
+            <!-- Grille des informations profil -->
+            <div class="profile-grid">
+                <!-- Carte Informations personnelles -->
+                <div class="profile-card">
+                    <div class="card-icon">👤</div>
+                    <h3 class="card-title">Informations personnelles</h3>
+                    
+                    <?php if ($user_type === 'etudiant'): ?>
+                        <div class="info-item">
+                            <span class="info-label">Nom complet</span>
+                            <span class="info-value"><?php echo htmlspecialchars($user_data['prenom'] . ' ' . $user_data['nom']); ?></span>
                         </div>
-                    <?php endforeach; ?>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value"><?php echo htmlspecialchars($user_data['email']); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Date de naissance</span>
+                            <span class="info-value">
+                                <?php 
+                                if (!empty($user_data['date_naissance'])) {
+                                    $date = new DateTime($user_data['date_naissance']);
+                                    echo $date->format('d/m/Y');
+                                } else {
+                                    echo 'Non renseignée';
+                                }
+                                ?>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Âge</span>
+                            <span class="info-value">
+                                <?php 
+                                if (!empty($user_data['date_naissance'])) {
+                                    $naissance = new DateTime($user_data['date_naissance']);
+                                    $aujourd_hui = new DateTime();
+                                    $age = $aujourd_hui->diff($naissance)->y;
+                                    echo $age . ' ans';
+                                } else {
+                                    echo 'Non calculé';
+                                }
+                                ?>
+                            </span>
+                        </div>
+                    <?php else: // Professeur ?>
+                        <div class="info-item">
+                            <span class="info-label">Nom</span>
+                            <span class="info-value"><?php echo htmlspecialchars($user_data['nom']); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value"><?php echo htmlspecialchars($user_data['email']); ?></span>
+                        </div>
+                        <?php if (isset($user_data['specialite'])): ?>
+                        <div class="info-item">
+                            <span class="info-label">Spécialité</span>
+                            <span class="info-value"><?php echo htmlspecialchars($user_data['specialite']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+
+                <!-- Carte Statistiques -->
+                <div class="profile-card">
+                    <div class="card-icon">📊</div>
+                    <h3 class="card-title">Mes statistiques</h3>
+                    <div class="info-item">
+                        <span class="info-label">Nombre de cours</span>
+                        <span class="info-value"><?php echo count($cours); ?></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">ID <?php echo $user_type === 'etudiant' ? 'Étudiant' : 'Professeur'; ?></span>
+                        <span class="info-value">#<?php echo htmlspecialchars($user_id); ?></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Statut</span>
+                        <span class="info-value">Actif</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Dernière connexion</span>
+                        <span class="info-value">Aujourd'hui</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section des cours -->
+            <div class="courses-section">
+                <div class="section-header">
+                    <div class="section-icon">📚</div>
+                    <h2 class="section-title">
+                        <?php echo $user_type === 'etudiant' ? 'Mes Cours' : 'Mes Cours Enseignés'; ?> 
+                        (<?php echo count($cours); ?>)
+                    </h2>
+                </div>
+                
+                <?php if (empty($cours)): ?>
+                    <div class="no-courses">
+                        <div class="no-courses-icon">📭</div>
+                        <p class="no-courses-text">
+                            <?php echo $user_type === 'etudiant' ? 'Aucun cours inscrit pour le moment.' : 'Aucun cours assigné pour le moment.'; ?>
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div class="courses-grid">
+                        <?php foreach ($cours as $c): ?>
+                            <div class="course-card">
+                                <div class="course-header">
+                                    <h4 class="course-title"><?php echo htmlspecialchars($c['intitule']); ?></h4>
+                                    <span class="platform-badge"><?php echo htmlspecialchars($c['plateforme']); ?></span>
+                                </div>
+                                <div class="course-details">
+                                    <div class="course-detail">
+                                        <span class="course-detail-label">Matière</span>
+                                        <span class="course-detail-value"><?php echo htmlspecialchars($c['matiere_nom']); ?></span>
+                                    </div>
+                                    
+                                    <?php if ($user_type === 'etudiant'): ?>
+                                        <div class="course-detail">
+                                            <span class="course-detail-label">Professeur</span>
+                                            <span class="course-detail-value"><?php echo htmlspecialchars($c['prof_nom']); ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="course-detail">
+                                            <span class="course-detail-label">Étudiants inscrits</span>
+                                            <span class="course-detail-value"><?php echo $c['nombre_etudiants']; ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="course-detail">
+                                        <span class="course-detail-label">Date</span>
+                                        <span class="course-detail-value">
+                                            <?php 
+                                            $date = new DateTime($c['date']);
+                                            echo $date->format('d/m/Y');
+                                            ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
+    </main>
 </body>
 </html>
 
 <?php
-// Inclure le pied de page HTML ici
+// Inclure le pied de page HTML ici si nécessaire
 require_once 'footer.php';
 ?>
