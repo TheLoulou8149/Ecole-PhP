@@ -326,15 +326,15 @@
 
             <!-- Footer bottom -->
             <div class="footer-bottom">
-                <div class="footer-legal">
-                    <span class="legal-link">Mentions légales</span>
-                    <span class="legal-link">CGU</span>
-                    <span class="legal-link">Confidentialité</span>
-                    <span class="legal-link">Cookies</span>
-                
-                <p class="copyright">&copy; <?php echo date('Y'); ?> EduConnect. Tous droits réservés.</p>
+            <div class="footer-legal">
+                <span class="legal-text">Mentions légales</span>
+                <span class="legal-text">CGU</span>
+                <span class="legal-text">Confidentialité</span>
+                <span class="legal-text">Cookies</span>
             </div>
-        </div>
+    <p class="copyright">&copy; <?php echo date('Y'); ?> EduConnect. Tous droits réservés.</p>
+            </div>
+            </div>
     </footer>
 </body>
 </html>
