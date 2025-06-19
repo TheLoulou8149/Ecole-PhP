@@ -23,9 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = 'Format d\'email invalide.';
     } else {
         try {
+            // Obtenir la connexion à la base de données
+            $pdo = getDBConnection();
+            
+            // Déterminer la table selon le type d'utilisateur (cohérent avec login.php)
+            $table = ($user_type == 'professeur') ? 'professeurs' : 'etudiants';
+            
             // Vérifier si l'email existe déjà
-            $table = ($user_type == 'prof') ? 'prof' : 'etudiant';
-            $sql_check = "SELECT id FROM $table WHERE email = :email";
+            $sql_check = "SELECT * FROM $table WHERE email = :email";
             $stmt_check = $pdo->prepare($sql_check);
             $stmt_check->bindParam(':email', $email);
             $stmt_check->execute();
@@ -37,7 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insérer le nouvel utilisateur
-                $sql_insert = "INSERT INTO $table (nom, prenom, email, mot_de_passe, date_creation) VALUES (:nom, :prenom, :email, :password, NOW())";
+                // Adapter les colonnes selon votre structure de base de données
+                if ($user_type == 'professeur') {
+                    $sql_insert = "INSERT INTO professeurs (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
+                } else {
+                    $sql_insert = "INSERT INTO etudiants (nom, prenom, email, password) VALUES (:nom, :prenom, :email, :password)";
+                }
+                
                 $stmt_insert = $pdo->prepare($sql_insert);
                 $stmt_insert->bindParam(':nom', $nom);
                 $stmt_insert->bindParam(':prenom', $prenom);
@@ -46,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 if ($stmt_insert->execute()) {
                     $success = 'Inscription réussie ! Vous pouvez maintenant vous connecter.';
+                    // Optionnel : vider les champs après succès
+                    $_POST = array();
                 } else {
                     $error = 'Erreur lors de l\'inscription.';
                 }
@@ -182,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <select name="user_type" id="user_type" required>
                     <option value="">Choisissez votre type de compte</option>
                     <option value="etudiant" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] == 'etudiant') ? 'selected' : ''; ?>>Étudiant</option>
-                    <option value="prof" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] == 'prof') ? 'selected' : ''; ?>>Professeur</option>
+                    <option value="professeur" <?php echo (isset($_POST['user_type']) && $_POST['user_type'] == 'professeur') ? 'selected' : ''; ?>>Professeur</option>
                 </select>
             </div>
             
