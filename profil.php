@@ -7,16 +7,15 @@ if (!file_exists('config.php')) {
     die("Erreur : Le fichier config.php est manquant.");
 }
 
-require_once 'config.php'; // Inclure le fichier de configuration
+require_once 'config.php';
 
-// Vérifier si la fonction getDBConnection() existe et récupérer la connexion PDO
+// Vérifier si la fonction getDBConnection() existe
 if (!function_exists('getDBConnection')) {
     die("Erreur : La fonction getDBConnection() est absente du fichier config.php.");
 }
 
 $pdo = getDBConnection();
 
-// Vérifier si la connexion PDO est valide
 if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
@@ -27,19 +26,25 @@ if (empty($_SESSION['id_etudiant'])) {
     exit();
 }
 
-// Récupérer l'ID de l'étudiant connecté
 $id_etudiant = (int) $_SESSION['id_etudiant'];
 
-// Inclure l'en-tête HTML
+// Inclure l'en-tête HTML ici
 include 'header.php';
+
+// Bloc try/catch
+try {
+    // Vérifier que l'étudiant existe
+    $stmt = $pdo->prepare("SELECT * FROM etudiants WHERE id_etudiant = ?");
+    $stmt->execute([$id_etudiant]);
+    $etudiant = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$etudiant) {
         die("Étudiant non trouvé pour l'ID: $id_etudiant");
     }
 
-    // Récupérer les cours de l'étudiant avec les détails
+    // Récupérer les cours
     $stmt = $pdo->prepare("
-        SELECT c.*, m.intitule as matiere_nom, p.nom as prof_nom
+        SELECT c.*, m.intitule AS matiere_nom, p.nom AS prof_nom
         FROM cours c
         INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
         INNER JOIN matieres m ON c.id_matiere = m.id_matiere
@@ -50,7 +55,7 @@ include 'header.php';
     $stmt->execute([$id_etudiant]);
     $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-} catch(PDOException $e) {
+} catch (PDOException $e) {
     die("Erreur : " . $e->getMessage());
 }
 ?>
@@ -491,6 +496,6 @@ include 'header.php';
 </html>
 
 <?php
-// Inclure le pied de page HTML
+// Inclure le pied de page HTML ici
 include 'footer.php';
 ?>
