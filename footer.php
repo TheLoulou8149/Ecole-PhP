@@ -312,11 +312,11 @@
                     </div>
                     
                     <div class="social-links">
-                        <a href="#" class="social-link" aria-label="Facebook" title="Facebook">📘</a>
-                        <a href="#" class="social-link" aria-label="Twitter" title="Twitter">🐦</a>
-                        <a href="#" class="social-link" aria-label="LinkedIn" title="LinkedIn">💼</a>
-                        <a href="#" class="social-link" aria-label="Instagram" title="Instagram">📷</a>
-                        <a href="#" class="social-link" aria-label="YouTube" title="YouTube">📹</a>
+                        <a href="#" class="social-text" aria-label="Facebook" title="Facebook">📘</a>
+                        <a href="#" class="social-text" aria-label="Twitter" title="Twitter">🐦</a>
+                        <a href="#" class="social-text" aria-label="LinkedIn" title="LinkedIn">💼</a>
+                        <a href="#" class="social-text" aria-label="Instagram" title="Instagram">📷</a>
+                        <a href="#" class="social-text" aria-label="YouTube" title="YouTube">📹</a>
                     </div>
                 </div>
             </div>
