@@ -32,7 +32,7 @@ try {
     // Récupération des cours
     if ($user_type === 'etudiant') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere, p.nom AS prof
+                         m.intitule AS matieres, p.nom AS prof
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
                   INNER JOIN profs p ON c.id_prof = p.id_prof
@@ -43,8 +43,8 @@ try {
                          m.intitule AS matieres,
                          'Vous' AS profs
                   FROM cours c
-                  INNER JOIN matieres m ON c.id_matieres = m.id_matieres
-                  WHERE c.id_profs = ?";
+                  INNER JOIN matieres m ON c.id_matiere s= m.id_matiere
+                  WHERE c.id_prof = ?";
     } else {
         // Requête vide pour types inconnus
         $query = "SELECT NULL LIMIT 0";
