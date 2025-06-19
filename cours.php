@@ -24,42 +24,29 @@ try {
         $stmt->execute([$user_id]);
         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
         $user_name = 'Prof. ' . $user_info['nom'];
-    } else {
-        // Gestion des types d'utilisateurs inconnus
-        die("Type d'utilisateur non reconnu");
     }
 
     // Récupération des cours
     if ($user_type === 'etudiant') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matieres, p.nom AS prof
+                         m.intitule AS matiere, p.nom AS prof
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
                   INNER JOIN profs p ON c.id_prof = p.id_prof
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
-    } else if ($user_type === 'profs') {
-        $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matieres,
-                         'Vous' AS profs
-                  FROM cours c
-                  INNER JOIN matieres m ON c.id_matiere s= m.id_matiere
-                  WHERE c.id_prof = ?";
-    } else {
-        // Requête vide pour types inconnus
-        $query = "SELECT NULL LIMIT 0";
-    }
-// AJOUTEZ CE CODE POUR DÉBOGUER
-echo "<pre>User Type: $user_type</pre>";
-echo "<pre>Query: $query</pre>";
-die();
+ } else if ($user_type === 'prof') {
+    $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
+                     m.intitule AS matiere,
+                     'Vous' AS prof  // Colonne ajoutée ici
+              FROM cours c
+              INNER JOIN matieres m ON c.id_matiere = m.id_matiere
+              WHERE c.id_prof = ?";
+}
 
-$stmt = $pdo->prepare($query);
     $stmt = $pdo->prepare($query);
-    $stmt->execute([$user_id]);
-    $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // ... le reste du code inchangé ...
+$stmt->execute([$user_id]);
+$cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Calcul des statistiques
     $totalCours = count($cours);
     $today = date('Y-m-d');
