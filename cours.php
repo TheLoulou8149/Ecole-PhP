@@ -1,15 +1,17 @@
 <?php
 session_start();
 require_once 'config.php';
-require_once 'header.php';
 
+// Vérification de la connexion
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
     header('Location: login.php');
     exit();
 }
+
 $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 
+// Récupération des informations utilisateur
 try {
     $pdo = getDBConnection();
     
@@ -78,6 +80,8 @@ $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Erreur de base de données : " . $e->getMessage());
 }
+
+require_once 'header.php';
 ?>
 
 <!DOCTYPE html>
