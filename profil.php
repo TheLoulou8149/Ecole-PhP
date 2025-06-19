@@ -21,20 +21,17 @@ if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Vérifier si l'utilisateur est connecté ET que c'est un étudiant
-if (empty($_SESSION['user_id']) || $_SESSION['user_type'] !== 'etudiant') {
+// Vérifier si l'utilisateur est connecté
+if (empty($_SESSION['id_etudiant'])) {
     header('Location: login.php');
     exit();
 }
 
 // Récupérer l'ID de l'étudiant connecté
-$id_etudiant = (int) $_SESSION['user_id'];
+$id_etudiant = (int) $_SESSION['id_etudiant'];
 
-try {
-    // Récupérer les informations de l'étudiant
-    $stmt = $pdo->prepare("SELECT * FROM etudiants WHERE id_etudiant = ?");
-    $stmt->execute([$id_etudiant]);
-    $etudiant = $stmt->fetch(PDO::FETCH_ASSOC);
+// Inclure l'en-tête HTML
+include 'header.php';
 
     if (!$etudiant) {
         die("Étudiant non trouvé pour l'ID: $id_etudiant");
@@ -492,3 +489,8 @@ try {
     </div>
 </body>
 </html>
+
+<?php
+// Inclure le pied de page HTML
+include 'footer.php';
+?>
