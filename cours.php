@@ -36,11 +36,11 @@ try {
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
     } else if ($user_type === 'prof') {
+        // Correction : requête simplifiée pour les professeurs
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere, p.nom AS prof
+                         m.intitule AS matiere
                   FROM cours c
                   INNER JOIN matieres m ON c.id_matiere = m.id_matiere
-                  INNER JOIN profs p ON c.id_prof = p.id_prof
                   WHERE c.id_prof = ?";
     }
 
@@ -85,7 +85,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+    <br>
 
     <style>
         * {
@@ -177,6 +177,22 @@ try {
             gap: 20px;
         }
 
+        .header {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
         .date-display {
             font-size: 1rem;
@@ -365,6 +381,13 @@ try {
             display: none;
             grid-template-columns: 1fr;
             gap: 15px;
+        }
+
+        .no-course {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
         }
 
         .course-card {
@@ -648,7 +671,11 @@ try {
                     const courseDiv = document.createElement('div');
                     courseDiv.className = 'course-item';
                     courseDiv.innerHTML = `<i class="fas fa-book"></i> ${cours.intitule.substring(0, 15)}`;
-                    courseDiv.title = `${cours.intitule} - ${cours.prof}`;
+                    
+                    // Adaptation pour les professeurs
+                    const profName = cours.prof ? cours.prof : "Vous";
+                    courseDiv.title = `${cours.intitule} - ${profName}`;
+                    
                     courseDiv.onclick = () => showCourseDetails(cours.id_cours);
                     dayDiv.appendChild(courseDiv);
                 });
@@ -660,13 +687,19 @@ try {
         function loadCoursList() {
             const listView = document.getElementById('listView');
             listView.innerHTML = '';
+
+            // Message si aucun cours
+            if (coursData.length === 0) {
+                listView.innerHTML = '<div class="no-course">Aucun cours disponible</div>';
+                return;
+            }
             
             coursData.forEach((cours, index) => {
                 const courseCard = document.createElement('div');
                 courseCard.className = `course-card`;
                 
-                // Récupérer l'heure réelle du cours si disponible
-                const courseTime = cours.heure ? cours.heure : getRandomTime();
+                // Adaptation pour les professeurs
+                const profName = cours.prof ? cours.prof : "Vous";
                 
                 courseCard.innerHTML = `
                     <div class="course-header">
@@ -681,7 +714,7 @@ try {
                         </div>
                         <div class="meta-item">
                             <div class="meta-icon"><i class="fas fa-user-tie"></i></div>
-                            <div>${cours.prof}</div>
+                            <div>${profName}</div>
                         </div>
                         <div class="meta-item">
                             <div class="meta-icon"><i class="fas fa-laptop"></i></div>
@@ -689,7 +722,7 @@ try {
                         </div>
                         <div class="meta-item">
                             <div class="meta-icon"><i class="fas fa-clock"></i></div>
-                            <div>${courseTime}</div>
+                            <div>${getRandomTime()}</div>
                         </div>
                     </div>
                     
@@ -748,7 +781,9 @@ try {
         function showCourseDetails(courseId) {
             const course = coursData.find(c => c.id_cours == courseId);
             if (course) {
-                alert(`Détails du cours:\n\nTitre: ${course.intitule}\nMatière: ${course.matiere}\nDate: ${formatDate(course.date)}\nProfesseur: ${course.prof}\nPlateforme: ${course.plateforme}`);
+                // Adaptation pour les professeurs
+                const profName = course.prof ? course.prof : "Vous";
+                alert(`Détails du cours:\n\nTitre: ${course.intitule}\nMatière: ${course.matiere}\nDate: ${formatDate(course.date)}\nProfesseur: ${profName}\nPlateforme: ${course.plateforme}`);
             }
         }
 
@@ -790,7 +825,7 @@ try {
             });
         });
     </script>
-    
+    <br>
     <?php include 'footer.php'; ?>
 
 </body>
