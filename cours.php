@@ -100,10 +100,9 @@ try {
             min-height: 100vh;
             color: #333;
             line-height: 1.6;
-            padding: 20px;
         }
 
-        .container {
+        .container-cours {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
@@ -502,7 +501,7 @@ try {
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-cours">
         <!-- Sidebar simplifiée -->
         <div class="sidebar">
             <div class="user-card">
@@ -520,7 +519,7 @@ try {
         
         <!-- Main Content -->
         <div class="main-content">
-            <div class="header">
+            <div class="header-dashboard">
                 <h1><i class="fas fa-graduation-cap"></i> Tableau de bord</h1>
                 <div class="date-display"><?php echo date('l j F Y'); ?></div>
             </div>
