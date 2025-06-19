@@ -43,10 +43,6 @@ try {
               INNER JOIN matieres m ON c.id_matiere = m.id_matiere
               WHERE c.id_prof = ?";
 }
-// AJOUTEZ CE CODE POUR DÉBOGUER
-echo "<pre>User Type: $user_type</pre>";
-echo "<pre>Query: $query</pre>";
-die();
 
 $stmt = $pdo->prepare($query);
     $stmt = $pdo->prepare($query);
