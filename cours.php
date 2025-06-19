@@ -49,7 +49,12 @@ try {
         // Requête vide pour types inconnus
         $query = "SELECT NULL LIMIT 0";
     }
+// AJOUTEZ CE CODE POUR DÉBOGUER
+echo "<pre>User Type: $user_type</pre>";
+echo "<pre>Query: $query</pre>";
+die();
 
+$stmt = $pdo->prepare($query);
     $stmt = $pdo->prepare($query);
     $stmt->execute([$user_id]);
     $cours = $stmt->fetchAll(PDO::FETCH_ASSOC);
