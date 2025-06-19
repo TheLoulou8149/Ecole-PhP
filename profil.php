@@ -21,14 +21,14 @@ if (!$pdo instanceof PDO) {
     die("Erreur : La connexion à la base de données a échoué.");
 }
 
-// Vérifier si l'utilisateur est connecté
-if (empty($_SESSION['id_etudiant'])) {
+// Vérifier si l'utilisateur est connecté ET que c'est un étudiant
+if (empty($_SESSION['user_id']) || $_SESSION['user_type'] !== 'etudiant') {
     header('Location: login.php');
     exit();
 }
 
 // Récupérer l'ID de l'étudiant connecté
-$id_etudiant = (int) $_SESSION['id_etudiant'];
+$id_etudiant = (int) $_SESSION['user_id'];
 
 try {
     // Récupérer les informations de l'étudiant
@@ -307,24 +307,25 @@ try {
             font-weight: 500;
         }
 
-        .test-notice {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 16px 24px;
+            padding: 10px 20px;
+            border: none;
             border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
+            text-decoration: none;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .debug-info {
-            background: #1e40af;
-            color: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-family: monospace;
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
 
         @media (max-width: 768px) {
@@ -353,10 +354,20 @@ try {
             .courses-grid {
                 grid-template-columns: 1fr;
             }
+
+            .logout-btn {
+                position: static;
+                display: block;
+                width: 100%;
+                margin-bottom: 20px;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="logout.php" class="logout-btn">Déconnexion</a>
+    
     <div class="container">
         <!-- Section de bienvenue -->
         <div class="welcome-section">
@@ -385,8 +396,12 @@ try {
                     <span class="info-label">Date de naissance</span>
                     <span class="info-value">
                         <?php 
-                        $date = new DateTime($etudiant['date_naissance']);
-                        echo $date->format('d/m/Y');
+                        if (!empty($etudiant['date_naissance'])) {
+                            $date = new DateTime($etudiant['date_naissance']);
+                            echo $date->format('d/m/Y');
+                        } else {
+                            echo 'Non renseignée';
+                        }
                         ?>
                     </span>
                 </div>
@@ -394,10 +409,14 @@ try {
                     <span class="info-label">Âge</span>
                     <span class="info-value">
                         <?php 
-                        $naissance = new DateTime($etudiant['date_naissance']);
-                        $aujourd_hui = new DateTime();
-                        $age = $aujourd_hui->diff($naissance)->y;
-                        echo $age . ' ans';
+                        if (!empty($etudiant['date_naissance'])) {
+                            $naissance = new DateTime($etudiant['date_naissance']);
+                            $aujourd_hui = new DateTime();
+                            $age = $aujourd_hui->diff($naissance)->y;
+                            echo $age . ' ans';
+                        } else {
+                            echo 'Non calculé';
+                        }
                         ?>
                     </span>
                 </div>
@@ -460,16 +479,16 @@ try {
                                     <span class="course-detail-value">
                                         <?php 
                                         $date = new DateTime($c['date']);
-                        echo $date->format('d/m/Y');
-                        ?>
-                    </span>
+                                        echo $date->format('d/m/Y');
+                                        ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-</div>
-</div>
+    </div>
 </body>
 </html>
