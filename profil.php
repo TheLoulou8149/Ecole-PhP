@@ -2,9 +2,7 @@
 // Démarrer la session : doit être la toute première instruction
 session_start();
 
-require_once 'header.php'; // Votre header existant
-
-// Vérifier si l'utilisateur est connecté (étudiant OU professeur)
+// Vérifier si l'utilisateur est connecté AVANT d'inclure le header
 if (empty($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['etudiant', 'prof'])) {
     header('Location: login.php');
     exit();
@@ -107,6 +105,9 @@ function getInitials($user_data, $user_type) {
         }
     }
 }
+
+// MAINTENANT on peut inclure le header car toutes les redirections sont faites
+require_once 'header.php';
 ?>
 
 <style>
