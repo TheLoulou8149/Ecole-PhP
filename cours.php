@@ -39,7 +39,6 @@ $pdo = new PDO($dsn, $user, $pass, $options);
                 m.intitule,
                 COUNT(c.id_cours) as cours_count,
                 SUM(CASE WHEN c.date < CURDATE() THEN 1 ELSE 0 END) as completed_cours,
-                SUM(TIME_TO_SEC(c.duree)/3600) as total_hours,
                 'active' as status
             FROM matieres m
             INNER JOIN cours c ON m.id_matiere = c.id_matiere
