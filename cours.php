@@ -38,13 +38,13 @@ try {
                   INNER JOIN profs p ON c.id_prof = p.id_prof
                   INNER JOIN cours_etudiants ce ON c.id_cours = ce.id_cours
                   WHERE ce.id_etudiant = ?";
-    } else if ($user_type === 'prof') {
+    } else if ($user_type === 'profs') {
         $query = "SELECT c.id_cours, c.intitule, c.date, c.plateforme, 
-                         m.intitule AS matiere,
-                         'Vous' AS prof
+                         m.intitule AS matieres,
+                         'Vous' AS profs
                   FROM cours c
-                  INNER JOIN matieres m ON c.id_matiere = m.id_matiere
-                  WHERE c.id_prof = ?";
+                  INNER JOIN matieres m ON c.id_matieres = m.id_matieres
+                  WHERE c.id_profs = ?";
     } else {
         // Requête vide pour types inconnus
         $query = "SELECT NULL LIMIT 0";
