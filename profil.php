@@ -2,6 +2,8 @@
 // Démarrer la session : doit être la toute première instruction
 session_start();
 
+require_once 'header.php'; // Votre header existant
+
 // Vérifier si l'utilisateur est connecté (étudiant OU professeur)
 if (empty($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['etudiant', 'prof'])) {
     header('Location: login.php');
