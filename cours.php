@@ -1,11 +1,8 @@
 <?php
 session_start();
 require_once 'config.php';
+require_once 'header.php';
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type'])) {
-    header('Location: login.php');
-    exit();
-}
 
 $user_id = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
