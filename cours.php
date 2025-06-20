@@ -86,10 +86,9 @@ try {
     <title>Tableau de bord - École</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-  <?php include 'header.php'; ?>
+    <?php include 'header.php'; ?>
 
     <style>
-
         * {
             margin: 0;
             padding: 0;
@@ -180,7 +179,6 @@ try {
             gap: 20px;
         }
 
-    
 
         .date-display {
             font-size: 1rem;
@@ -506,7 +504,7 @@ try {
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
+        <!-- Sidebar simplifiée -->
         <div class="sidebar">
             <div class="user-card">
                 <div class="user-name"><?php echo htmlspecialchars($user_name); ?></div>
@@ -515,12 +513,8 @@ try {
             
             <ul class="sidebar-menu">
                 <li><a href="#" class="active"><i class="fas fa-home"></i> Tableau de bord</a></li>
-                <li><a href="#"><i class="fas fa-calendar-alt"></i> Calendrier</a></li>
-                <li><a href="#"><i class="fas fa-book"></i> Mes cours</a></li>
-                <li><a href="#"><i class="fas fa-graduation-cap"></i> Diplômes</a></li>
-                <li><a href="#"><i class="fas fa-users"></i> Étudiants</a></li>
-                <li><a href="#"><i class="fas fa-chalkboard-teacher"></i> Professeurs</a></li>
-                <li><a href="#"><i class="fas fa-cog"></i> Paramètres</a></li>
+                <li><a href="#" id="sidebarCalendar"><i class="fas fa-calendar-alt"></i> Calendrier</a></li>
+                <li><a href="#" id="sidebarList"><i class="fas fa-book"></i> Mes cours</a></li>
                 <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
             </ul>
         </div>
@@ -673,6 +667,9 @@ try {
                 const courseCard = document.createElement('div');
                 courseCard.className = `course-card`;
                 
+                // Récupérer l'heure réelle du cours si disponible
+                const courseTime = cours.heure ? cours.heure : getRandomTime();
+                
                 courseCard.innerHTML = `
                     <div class="course-header">
                         <div class="course-title">${cours.intitule}</div>
@@ -694,7 +691,7 @@ try {
                         </div>
                         <div class="meta-item">
                             <div class="meta-icon"><i class="fas fa-clock"></i></div>
-                            <div>${getRandomTime()}</div>
+                            <div>${courseTime}</div>
                         </div>
                     </div>
                     
@@ -765,10 +762,38 @@ try {
             // Écouteurs d'événements pour les boutons
             document.getElementById('calendarBtn').addEventListener('click', showCalendar);
             document.getElementById('listBtn').addEventListener('click', showList);
+            
+            // Écouteurs pour la sidebar
+            document.getElementById('sidebarCalendar').addEventListener('click', function(e) {
+                e.preventDefault();
+                showCalendar();
+            });
+            
+            document.getElementById('sidebarList').addEventListener('click', function(e) {
+                e.preventDefault();
+                showList();
+            });
+            
+            // Recherche de cours
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const courseCards = document.querySelectorAll('.course-card');
+                
+                courseCards.forEach(card => {
+                    const title = card.querySelector('.course-title').textContent.toLowerCase();
+                    const subject = card.querySelector('.course-subject').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || subject.includes(searchTerm)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
         });
     </script>
     
-<?php include 'footer.php'; ?>
+    <?php include 'footer.php'; ?>
 
 </body>
 </html>
