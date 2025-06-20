@@ -153,6 +153,7 @@ require_once 'header.php';
         /* Ajustement pour le header existant */
         .main-content {
             padding: 20px;
+            margin-bottom: 40px; /* Espace supplémentaire avant le footer */
         }
 
         .container {
@@ -280,6 +281,7 @@ require_once 'header.php';
 
         .courses-section {
             margin-top: 30px;
+            margin-bottom: 60px; /* Espace avant le footer */
         }
 
         .section-header {
